@@ -11,21 +11,6 @@ jobs:
   zap-scan:
     name: OWASP ZAP Security Scan
     runs-on: ubuntu-latest
-    
-    services:
-      juice-shop:
-        image: bkimminich/juice-shop:latest
-        ports:
-          - 3000:3000
-        options: --health-cmd "node check/olypnus.js || exit 0" --health-interval 10s --health-timeout 5s --health-retries 5
-      
-      zap:
-        image: ghcr.io/zaproxy/zaproxy:stable
-        ports:
-          - 8080:8080
-        env:
-          ZAP_API_KEY: zapster-api-key
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,9 +27,10 @@ jobs:
       - name: Create results directory
         run: mkdir -p zap-results
 
-      - name: Wait for services to be ready
+      - name: Start Juice Shop
         run: |
-          echo "Waiting for Juice Shop to be ready..."
+          docker run -d --name juice-shop -p 3000:3000 bkimminich/juice-shop:latest
+          echo "Waiting for Juice Shop to start..."
           for i in {1..60}; do
             if curl -s http://localhost:3000 > /dev/null 2>&1; then
               echo "Juice Shop is ready!"
@@ -53,8 +39,11 @@ jobs:
             echo "Waiting for Juice Shop... ($i/60)"
             sleep 2
           done
-          
-          echo "Checking ZAP API..."
+
+      - name: Start ZAP daemon
+        run: |
+          docker run -d --name zap -p 8080:8080 -v ${{ github.workspace }}/zap-results:/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-api.sh
+          echo "Waiting for ZAP to start..."
           for i in {1..30}; do
             if curl -s http://localhost:8080 > /dev/null 2>&1; then
               echo "ZAP is ready!"
@@ -140,3 +129,9 @@ jobs:
             cat zap-results/report.json | head -100 >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop juice-shop zap 2>/dev/null || true
+          docker rm juice-shop zap 2>/dev/null || true
