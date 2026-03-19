@@ -25,8 +25,6 @@ jobs:
           - 8080:8080
         env:
           ZAP_API_KEY: zapster-api-key
-        options: >
-          -v $(pwd)/zap-results:/zap/wrk:rw
 
     steps:
       - name: Checkout code
@@ -41,81 +39,84 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Create results directory
+        run: mkdir -p zap-results
+
       - name: Wait for services to be ready
         run: |
           echo "Waiting for Juice Shop to be ready..."
-          for i in {1..30}; do
+          for i in {1..60}; do
             if curl -s http://localhost:3000 > /dev/null 2>&1; then
               echo "Juice Shop is ready!"
               break
             fi
-            echo "Waiting for Juice Shop... ($i/30)"
+            echo "Waiting for Juice Shop... ($i/60)"
             sleep 2
           done
           
           echo "Checking ZAP API..."
-          for i in {1..10}; do
+          for i in {1..30}; do
             if curl -s http://localhost:8080 > /dev/null 2>&1; then
               echo "ZAP is ready!"
               break
             fi
-            echo "Waiting for ZAP... ($i/10)"
+            echo "Waiting for ZAP... ($i/30)"
             sleep 2
           done
 
       - name: Get ZAP Version
         run: npm run zap:version
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
       - name: Run Spider Scan
-        run: npm run baseScan -- --url http://juice-shop:3000 --timeout 120000
+        run: npm run baseScan -- --url http://localhost:3000 --timeout 120000
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
       - name: Run Passive Scan
         run: npm run passiveScan -- --enable
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
       - name: Run Active Scan
-        run: npm run activeScan -- --url http://juice-shop:3000 --timeout 300000
+        run: npm run activeScan -- --url http://localhost:3000 --timeout 300000
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
       - name: Generate JSON Report
         run: npm run getReport -- --format json --output zap-results/report.json
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
       - name: Generate HTML Report
         run: npm run getReport -- --format html --output zap-results/report.html
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
       - name: Generate XML Report
         run: npm run getReport -- --format xml --output zap-results/report.xml
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
       - name: Generate JUnit Results
         run: npm run createJUnitResults -- --output zap-results/junit-results.xml --title "ZAP Security Scan"
         env:
-          ZAP_HOST: zap
+          ZAP_HOST: localhost
           ZAP_PORT: 8080
           ZAP_API_KEY: zapster-api-key
 
