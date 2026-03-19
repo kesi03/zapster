@@ -20,12 +20,14 @@ jobs:
         options: --health-cmd "node check/olypnus.js || exit 0" --health-interval 10s --health-timeout 5s --health-retries 5
       
       zap:
-        image: owasp/zap2docker-stable:latest
+        image: zaproxy/zaproxy:weekly
         ports:
           - 8080:8080
+        env:
+          ZAP_API_KEY: zapster-api-key
         options: >
-          --user root
           -v $(pwd)/zap-results:/zap/wrk:rw
+          zap-api.sh
 
     steps:
       - name: Checkout code
@@ -65,50 +67,58 @@ jobs:
       - name: Get ZAP Version
         run: npm run zap:version
         env:
-          ZAP_HOST: localhost
+          ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Run Spider Scan
         run: npm run baseScan -- --url http://juice-shop:3000 --timeout 120000
         env:
           ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Run Passive Scan
         run: npm run passiveScan -- --enable
         env:
           ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Run Active Scan
         run: npm run activeScan -- --url http://juice-shop:3000 --timeout 300000
         env:
           ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Generate JSON Report
         run: npm run getReport -- --format json --output zap-results/report.json
         env:
           ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Generate HTML Report
         run: npm run getReport -- --format html --output zap-results/report.html
         env:
           ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Generate XML Report
         run: npm run getReport -- --format xml --output zap-results/report.xml
         env:
           ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Generate JUnit Results
         run: npm run createJUnitResults -- --output zap-results/junit-results.xml --title "ZAP Security Scan"
         env:
           ZAP_HOST: zap
           ZAP_PORT: 8080
+          ZAP_API_KEY: zapster-api-key
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4
