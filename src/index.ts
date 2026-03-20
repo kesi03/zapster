@@ -5,7 +5,6 @@ import { baseScanCommand } from './commands/baseScan';
 import { passiveScanCommand } from './commands/passiveScan';
 import { activeScanCommand } from './commands/activeScan';
 import { ajaxScanCommand } from './commands/ajaxScan';
-import { apiScanCommand } from './commands/apiScan';
 import { getReportCommand } from './commands/getReport';
 import { getAlertsCommand } from './commands/getAlerts';
 import { getLogsCommand } from './commands/getLogs';
@@ -22,6 +21,10 @@ import { forcedBrowseCommand } from './commands/forcedBrowse';
 import { httpSessionsCommand } from './commands/httpSessions';
 import { breakCommand } from './commands/break';
 import { proxyCommand } from './commands/proxy';
+import { setDebug } from './utils/logger';
+
+const debugEnabled = process.env.DEBUG === 'true';
+setDebug(debugEnabled);
 
 yargs(hideBin(process.argv))
   .scriptName('zapster')
@@ -33,7 +36,6 @@ yargs(hideBin(process.argv))
   .command(passiveScanCommand)
   .command(activeScanCommand)
   .command(ajaxScanCommand)
-  .command(apiScanCommand)
   .command(getReportCommand)
   .command(getAlertsCommand)
   .command(getLogsCommand)

@@ -21,6 +21,7 @@ jobs:
       ZAP_PORT: 8080
       ZAP_API_KEY: zapster-api-key
       TARGET_URL: ${{ inputs.target_url || 'http://juice-shop:3000' }}
+      DEBUG: ${{ vars.DEBUG || 'false' }}
     services:
       zap:
         image: mockholm/zap-daemon
@@ -101,10 +102,6 @@ jobs:
 
       - name: Run Active Scan
         run: npm run activeScan -- --url ${{ env.TARGET_URL }} --timeout 600000
-
-      - name: Run API Scan
-        if: false
-        run: npm run apiScan -- --url ${{ env.TARGET_URL }}/api --timeout 600000
 
       - name: Get Alerts Summary
         run: npm run getAlerts -- --summary

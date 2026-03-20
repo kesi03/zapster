@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { ZapConfig } from '../types';
+import { logger } from '../utils/logger';
 
 export class ZapBase {
   protected client: AxiosInstance;
@@ -26,7 +27,7 @@ export class ZapBase {
   protected async request<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.client.get(endpoint, { params });
-      console.log(`[ZAP DEBUG] ${endpoint} =>`, JSON.stringify(response.data, null, 2));
+      logger.debug(endpoint, { data: response.data });
       return response.data;
     } catch (error: any) {
       const zapMessage =

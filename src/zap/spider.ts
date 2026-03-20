@@ -36,7 +36,6 @@ export class AjaxSpiderAPI extends ZapBase {
 
   async ajaxSpiderStatus(): Promise<{ status: string; nodesVisited: number }> {
     const response = await this.request<any>('/JSON/ajaxSpider/view/status');
-    console.log(`[AJAX SPIDER DEBUG] Status response:`, JSON.stringify(response, null, 2));
     
     let status = '';
     let nodesVisited = 0;
@@ -48,7 +47,6 @@ export class AjaxSpiderAPI extends ZapBase {
     }
     
     const resultsResponse = await this.request<any>('/JSON/ajaxSpider/view/results');
-    console.log(`[AJAX SPIDER DEBUG] Results response:`, JSON.stringify(resultsResponse, null, 2));
     
     if (resultsResponse.results) {
       nodesVisited = resultsResponse.results.length;
