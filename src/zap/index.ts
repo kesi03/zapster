@@ -14,3 +14,4 @@ export { SearchAPI } from './search';
 export { HttpSessionsAPI } from './httpSessions';
 export { BreakAPI } from './break';
 export { ProxyAPI } from './proxy';
+export { ApiScanAPI } from './apiScan';

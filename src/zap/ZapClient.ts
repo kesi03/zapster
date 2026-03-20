@@ -15,6 +15,7 @@ import { SearchAPI } from './search';
 import { HttpSessionsAPI } from './httpSessions';
 import { BreakAPI } from './break';
 import { ProxyAPI } from './proxy';
+import { ApiScanAPI } from './apiScan';
 
 export class ZapClient extends ZapBase {
   core: CoreAPI;
@@ -33,6 +34,7 @@ export class ZapClient extends ZapBase {
   httpSessions: HttpSessionsAPI;
   break: BreakAPI;
   proxy: ProxyAPI;
+  apiScan: ApiScanAPI;
 
   constructor(config: ZapConfig) {
     super(config);
@@ -53,5 +55,6 @@ export class ZapClient extends ZapBase {
     this.httpSessions = new HttpSessionsAPI(config);
     this.break = new BreakAPI(config);
     this.proxy = new ProxyAPI(config);
+    this.apiScan = new ApiScanAPI(config);
   }
 }

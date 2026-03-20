@@ -13,6 +13,7 @@ A comprehensive CLI tool for OWASP ZAP (Zed Attack Proxy) security scanning.
   - [Session Management](#session-management)
   - [Context & User Management](#context--user-management)
   - [Search & Discovery](#search--discovery)
+  - [Advanced Proxy Management](#advanced-proxy-management)
   - [Azure DevOps Integration](#azure-devops-integration)
   - [Configuration](#configuration-1)
 
@@ -121,6 +122,32 @@ Options:
 Examples:
   zapster ajaxScan -u https://example.com
   zapster ajaxScan -u https://example.com --max-duration 10 --browser-id firefox
+```
+
+#### `apiScan` - Full API Scan
+
+Run a comprehensive API scan combining spider, passive scan, and active scan in one command.
+
+```bash
+zapster apiScan --url https://example.com [options]
+
+Options:
+  --url, -u              Target URL (required)
+  --recurse              Recurse into found URLs (default: true)
+  --in-scope-only        Only scan URLs in scope (default: false)
+  --context, -c          Context name
+  --policy               Scan policy name
+  --method               HTTP method to use
+  --post-data            POST data to send
+  --poll-interval        Status check interval in ms (default: 5000)
+  --timeout              Maximum wait time in ms (default: 600000)
+  --output, -o           Output file path for report
+  --format, -f           Report format: json, html (default: json)
+
+Examples:
+  zapster apiScan -u https://api.example.com
+  zapster apiScan -u https://api.example.com --context myapp
+  zapster apiScan -u https://api.example.com -o report.json --format json
 ```
 
 #### `passiveScan` - Passive Scan Management
@@ -343,6 +370,70 @@ zapster getLogs
 
 ---
 
+### Advanced Proxy Management
+
+#### `httpSessions` - Manage HTTP Sessions
+
+Manage HTTP sessions for authenticated scanning.
+
+```bash
+zapster httpSessions --site <hostname> [options]
+
+Options:
+  --site, -s              Site hostname (required, e.g., example.com)
+  --list, -l              List sessions for site
+  --create, -c            Create a new empty session
+  --activate, -a          Set active session by name
+
+Examples:
+  zapster httpSessions --site example.com --list
+  zapster httpSessions --site example.com --create mysession
+  zapster httpSessions --site example.com --activate mysession
+```
+
+#### `break` - Manage Break Points
+
+Control break points for request/response interception.
+
+```bash
+zapster break [options]
+
+Options:
+  --add                   Add a new break point
+  --type                  Break type: request, response
+  --scope                 Break scope: all, mock, suite, tag (default: all)
+  --state                 Break state: all, on, off (default: on)
+  --match                 URL regex pattern to match
+  --list, -l              List all break points
+  --continue, -c          Continue the intercepted request/response
+
+Examples:
+  zapster break --list
+  zapster break --add --type request --match ".*login.*"
+  zapster break --continue
+```
+
+#### `proxy` - Proxy Chain Management
+
+Manage proxy chain exclusions.
+
+```bash
+zapster proxy [options]
+
+Options:
+  --list, -l              List excluded domains
+  --add                    Add domain to exclusion list
+  --regex                  Treat value as regex
+  --disable                Add as disabled
+
+Examples:
+  zapster proxy --list
+  zapster proxy --add "localhost"
+  zapster proxy --add ".*\.internal\.com" --regex
+```
+
+---
+
 ### Azure DevOps Integration
 
 #### `createWorkItem` - Create Azure DevOps Work Items
@@ -465,6 +556,15 @@ zapster passiveScan --enable
 zapster baseScan --url https://myapp.com
 zapster ajaxScan --url https://myapp.com --max-duration 5
 zapster activeScan --url https://myapp.com
+zapster apiScan --url https://api.myapp.com  # Full API scan
+
+# HTTP Session management
+zapster httpSessions --site myapp.com --list
+zapster httpSessions --site myapp.com --create logged-in
+
+# Break points for debugging
+zapster break --add --type request --match ".*api.*"
+zapster break --list
 
 # Get results
 zapster getAlerts --output alerts.json

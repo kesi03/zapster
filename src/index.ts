@@ -5,6 +5,7 @@ import { baseScanCommand } from './commands/baseScan';
 import { passiveScanCommand } from './commands/passiveScan';
 import { activeScanCommand } from './commands/activeScan';
 import { ajaxScanCommand } from './commands/ajaxScan';
+import { apiScanCommand } from './commands/apiScan';
 import { getReportCommand } from './commands/getReport';
 import { getAlertsCommand } from './commands/getAlerts';
 import { getLogsCommand } from './commands/getLogs';
@@ -18,6 +19,9 @@ import { contextCommand } from './commands/context';
 import { usersCommand } from './commands/users';
 import { searchCommand } from './commands/search';
 import { forcedBrowseCommand } from './commands/forcedBrowse';
+import { httpSessionsCommand } from './commands/httpSessions';
+import { breakCommand } from './commands/break';
+import { proxyCommand } from './commands/proxy';
 
 yargs(hideBin(process.argv))
   .scriptName('zapster')
@@ -29,6 +33,7 @@ yargs(hideBin(process.argv))
   .command(passiveScanCommand)
   .command(activeScanCommand)
   .command(ajaxScanCommand)
+  .command(apiScanCommand)
   .command(getReportCommand)
   .command(getAlertsCommand)
   .command(getLogsCommand)
@@ -42,6 +47,9 @@ yargs(hideBin(process.argv))
   .command(usersCommand)
   .command(searchCommand)
   .command(forcedBrowseCommand)
+  .command(httpSessionsCommand)
+  .command(breakCommand)
+  .command(proxyCommand)
   .option('host', {
     alias: 'H',
     type: 'string',
