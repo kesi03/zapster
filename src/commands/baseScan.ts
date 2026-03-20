@@ -45,6 +45,10 @@ export const baseScanCommand: yargs.CommandModule = {
 
     console.log(`Starting spider scan on: ${argv.url}`);
     console.log(`Host: ${argv.host}:${argv.port}`);
+    console.log(`Max Depth: ${argv.maxDepth || 'unlimited'}`);
+    console.log(`Max Children: ${argv.maxChildren || 'unlimited'}`);
+    console.log(`Recurse: ${argv.recurse}`);
+    
 
     try {
       const version = await zap.core.getVersion();
@@ -61,6 +65,7 @@ export const baseScanCommand: yargs.CommandModule = {
 
       const startTime = Date.now();
       let status = await zap.spider.spiderStatus(scanId);
+      console.log(JSON.stringify(status, null, 2));
 
       while (
         status.state !== 'FINISHED' &&
@@ -70,6 +75,7 @@ export const baseScanCommand: yargs.CommandModule = {
         console.log(`Scan progress: ${status.progress}%`);
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 2000));
         status = await zap.spider.spiderStatus(scanId);
+        console.log(JSON.stringify(status, null, 2));
       }
 
       if (status.state === 'FINISHED') {
