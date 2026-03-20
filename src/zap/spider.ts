@@ -3,7 +3,7 @@ import { ScanProgress } from '../types';
 
 export class SpiderAPI extends ZapBase {
   async spiderScan(url: string, maxDepth?: number, maxChildren?: number, recurse?: boolean) {
-    const params: Record<string, any> = { url: this.encodeUrl(url) };
+    const params: Record<string, any> = { url };
     if (maxDepth !== undefined) params.maxDepth = maxDepth;
     if (maxChildren !== undefined) params.maxChildren = maxChildren;
     if (recurse !== undefined) params.recurse = recurse ? 'true' : 'false';
@@ -21,7 +21,7 @@ export class SpiderAPI extends ZapBase {
 
 export class AjaxSpiderAPI extends ZapBase {
   async ajaxSpiderScan(url: string, maxDuration?: number) {
-    const params: Record<string, any> = { url: this.encodeUrl(url) };
+    const params: Record<string, any> = { url };
     if (maxDuration !== undefined) params.maxDuration = maxDuration;
     return this.request('/JSON/ajaxSpider/action/scan', params);
   }

@@ -11,7 +11,7 @@ export class ApiScanAPI extends ZapBase {
     postData?: string;
   }): Promise<{ scan: string }> {
     const params: Record<string, any> = {
-      url: this.encodeUrl(options.url),
+      url: options.url,
     };
 
     if (options.recurse !== undefined) params.recurse = options.recurse ? 'true' : 'false';

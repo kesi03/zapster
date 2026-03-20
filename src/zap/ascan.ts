@@ -8,7 +8,7 @@ export class ActiveScanAPI extends ZapBase {
     userId?: number,
     policyName?: string
   ): Promise<{ scan: string }> {
-    const params: Record<string, any> = { url: this.encodeUrl(url) };
+    const params: Record<string, any> = { url };
     if (contextName) params.contextName = contextName;
     if (userId !== undefined) params.userId = userId;
     if (policyName) params.policyName = policyName;
