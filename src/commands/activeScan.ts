@@ -50,11 +50,6 @@ export const activeScanCommand: yargs.CommandModule = {
       const version = await zap.core.getVersion();
       console.log(`Connected to ZAP version: ${version}`);
 
-      console.log('Adding URL to scan tree...');
-      await zap.core.accessUrl(argv.url as string);
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       const scanId = await zap.ascan.activeScan(
         argv.url as string,
         argv.context as string | undefined,
