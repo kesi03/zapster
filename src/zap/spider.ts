@@ -35,8 +35,11 @@ export class AjaxSpiderAPI extends ZapBase {
   }
 
   async ajaxSpiderStatus(): Promise<{ status: string; nodesVisited: number }> {
-    const response = await this.request<{ status: { status: string; nodesVisited: number } }>('/JSON/ajaxSpider/view/status');
-    return response.status;
+    const response = await this.request<{ status: string; nodesVisited: number }>('/JSON/ajaxSpider/view/status');
+    return {
+      status: response.status,
+      nodesVisited: response.nodesVisited
+    };
   }
 
   async ajaxSpiderStop(): Promise<void> {
