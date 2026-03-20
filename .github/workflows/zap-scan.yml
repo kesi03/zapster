@@ -32,8 +32,6 @@ jobs:
         options: >-
           --mount type=bind,source=${{ github.workspace }}/zap-results,target=/zap/wrk
           --shm-size=1g
-        credentials:
-          zap-api-key: zapster-api-key
 
       juice-shop:
         image: bkimminich/juice-shop:latest
