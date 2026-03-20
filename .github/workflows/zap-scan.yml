@@ -20,7 +20,7 @@ jobs:
       ZAP_HOST: localhost
       ZAP_PORT: 8080
       ZAP_API_KEY: zapster-api-key
-      TARGET_URL: ${{ inputs.target_url || 'http://localhost:3000' }}
+      TARGET_URL: ${{ inputs.target_url || 'http://0.0.0.0:3000' }}
     services:
       zap:
         image: mockholm/zap-daemon
