@@ -14,8 +14,8 @@ export class ApiScanAPI extends ZapBase {
       url: options.url,
     };
 
-    if (options.recurse !== undefined) params.recurse = options.recurse ? 'true' : 'false';
-    if (options.inScopeOnly !== undefined) params.inScopeOnly = options.inScopeOnly ? 'true' : 'false';
+    if (options.recurse !== undefined) params.recurse = options.recurse;
+    if (options.inScopeOnly !== undefined) params.inScopeOnly = options.inScopeOnly;
     if (options.contextName) params.contextName = options.contextName;
     if (options.scanPolicyName) params.scanPolicyName = options.scanPolicyName;
     if (options.method) params.method = options.method;

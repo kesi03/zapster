@@ -13,13 +13,13 @@ export class CoreAPI extends ZapBase {
   async newSession(name?: string, overwrite?: boolean): Promise<void> {
     const params: Record<string, any> = {};
     if (name) params.name = name;
-    if (overwrite !== undefined) params.overwrite = overwrite ? 'true' : 'false';
+    if (overwrite !== undefined) params.overwrite = overwrite;
     await this.request('/JSON/core/action/newSession', params);
   }
 
   async saveSession(name: string, overwrite?: boolean): Promise<void> {
     const params: Record<string, any> = { name };
-    if (overwrite !== undefined) params.overwrite = overwrite ? 'true' : 'false';
+    if (overwrite !== undefined) params.overwrite = overwrite;
     await this.request('/JSON/core/action/saveSession', params);
   }
 

@@ -6,7 +6,7 @@ export class SpiderAPI extends ZapBase {
     const params: Record<string, any> = { url };
     if (maxDepth !== undefined) params.maxDepth = maxDepth;
     if (maxChildren !== undefined) params.maxChildren = maxChildren;
-    if (recurse !== undefined) params.recurse = recurse ? 'true' : 'false';
+    if (recurse !== undefined) params.recurse = recurse;
     return this.request('/JSON/spider/action/scan', params);
   }
 

@@ -17,7 +17,7 @@ export class UsersAPI extends ZapBase {
     await this.request('/JSON/users/action/setUserEnabled', {
       contextId,
       userId,
-      enabled: enabled ? 'true' : 'false',
+      enabled,
     });
   }
 
