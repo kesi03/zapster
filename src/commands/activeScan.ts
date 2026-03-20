@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 
 export const activeScanCommand: yargs.CommandModule = {
   command: 'activeScan',
@@ -47,10 +47,10 @@ export const activeScanCommand: yargs.CommandModule = {
     console.log(`Host: ${argv.host}:${argv.port}`);
 
     try {
-      const version = await zap.getVersion();
+      const version = await zap.core.getVersion();
       console.log(`Connected to ZAP version: ${version}`);
 
-      const result = await zap.activeScan(
+      const result = await zap.ascan.activeScan(
         argv.url as string,
         argv.context as string | undefined,
         argv.userId as number | undefined,
@@ -61,7 +61,7 @@ export const activeScanCommand: yargs.CommandModule = {
       console.log(`Scan started with ID: ${scanId}`);
 
       const startTime = Date.now();
-      let scan = await zap.activeScanStatus(scanId) as any;
+      let scan = await zap.ascan.activeScanStatus(scanId) as any;
 
       while (
         scan.state !== 'FINISHED' &&
@@ -71,16 +71,16 @@ export const activeScanCommand: yargs.CommandModule = {
       ) {
         console.log(`Scan progress: ${scan.progress}% - Status: ${scan.state}`);
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 5000));
-        scan = await zap.activeScanStatus(scanId) as any;
+        scan = await zap.ascan.activeScanStatus(scanId) as any;
       }
 
       console.log(`Final status: ${scan.state}`);
       console.log('Active scan completed!');
 
-      const alerts = await zap.getAlerts(argv.url as string);
+      const alerts = await zap.alerts.getAlerts(argv.url as string);
       console.log(`Found ${alerts.alerts.length} alerts`);
 
-      const summary = await zap.getAlertsSummary();
+      const summary = await zap.alerts.getAlertsSummary();
       console.log('\nAlert Summary:');
       console.log(`  High: ${summary.RiskConf.High || 0}`);
       console.log(`  Medium: ${summary.RiskConf.Medium || 0}`);

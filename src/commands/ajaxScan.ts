@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 
 export const ajaxScanCommand: yargs.CommandModule = {
   command: 'ajaxScan',
@@ -50,14 +50,14 @@ export const ajaxScanCommand: yargs.CommandModule = {
     console.log(`Host: ${argv.host}:${argv.port}`);
 
     try {
-      const version = await zap.getVersion();
+      const version = await zap.core.getVersion();
       console.log(`Connected to ZAP version: ${version}`);
 
-      const result = await zap.ajaxSpiderScan(argv.url as string, argv.maxDuration as number | undefined);
+      const result = await zap.ajaxSpider.ajaxSpiderScan(argv.url as string, argv.maxDuration as number | undefined);
       console.log(`Scan started`);
 
       const startTime = Date.now();
-      let status = await zap.ajaxSpiderStatus();
+      let status = await zap.ajaxSpider.ajaxSpiderStatus();
 
       while (
         status.status !== 'STOPPED' &&
@@ -66,7 +66,7 @@ export const ajaxScanCommand: yargs.CommandModule = {
       ) {
         console.log(`AJAX Spider status: ${status.status} - Nodes visited: ${status.nodesVisited}`);
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 5000));
-        status = await zap.ajaxSpiderStatus();
+        status = await zap.ajaxSpider.ajaxSpiderStatus();
       }
 
       console.log(`Final status: ${status.status}`);

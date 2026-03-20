@@ -6,12 +6,18 @@ import { passiveScanCommand } from './commands/passiveScan';
 import { activeScanCommand } from './commands/activeScan';
 import { ajaxScanCommand } from './commands/ajaxScan';
 import { getReportCommand } from './commands/getReport';
+import { getAlertsCommand } from './commands/getAlerts';
 import { getLogsCommand } from './commands/getLogs';
 import { createJUnitResultsCommand } from './commands/createJUnitResults';
 import { createTestResultCommand } from './commands/createTestResult';
 import { createWorkItemCommand } from './commands/createWorkItem';
 import { configureRulesCommand } from './commands/configureRules';
 import { getVersionCommand } from './commands/getVersion';
+import { sessionCommand } from './commands/session';
+import { contextCommand } from './commands/context';
+import { usersCommand } from './commands/users';
+import { searchCommand } from './commands/search';
+import { forcedBrowseCommand } from './commands/forcedBrowse';
 
 yargs(hideBin(process.argv))
   .scriptName('zapster')
@@ -24,12 +30,18 @@ yargs(hideBin(process.argv))
   .command(activeScanCommand)
   .command(ajaxScanCommand)
   .command(getReportCommand)
+  .command(getAlertsCommand)
   .command(getLogsCommand)
   .command(createJUnitResultsCommand)
   .command(createTestResultCommand)
   .command(createWorkItemCommand)
   .command(configureRulesCommand)
   .command(getVersionCommand)
+  .command(sessionCommand)
+  .command(contextCommand)
+  .command(usersCommand)
+  .command(searchCommand)
+  .command(forcedBrowseCommand)
   .option('host', {
     alias: 'H',
     type: 'string',
@@ -39,7 +51,7 @@ yargs(hideBin(process.argv))
   .option('port', {
     alias: 'p',
     type: 'number',
-    default: parseInt(process.env.ZAP_PORT || '8080', 10),
+    default: Number.parseInt(process.env.ZAP_PORT || '8080', 10),
     description: 'ZAP API port',
   })
   .option('api-key', {

@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 
 export const configureRulesCommand: yargs.CommandModule = {
   command: 'configureRules',
@@ -46,23 +46,23 @@ export const configureRulesCommand: yargs.CommandModule = {
     try {
       if (argv.list) {
         console.log('Rule Configurations:');
-        const configs = await zap.getAllRuleConfigs();
+        const configs = await zap.core.getAllRuleConfigs();
         console.log(JSON.stringify(configs, null, 2));
       } else if (argv['reset-all']) {
-        await zap.resetAllRuleConfigValues();
+        await zap.core.resetAllRuleConfigValues();
         console.log('All rule configurations reset to defaults');
       } else if (argv.reset && argv['scanner-id']) {
-        await zap.resetRuleConfigValue(`ascan.scanner.${argv['scanner-id']}.threshold`);
+        await zap.core.resetRuleConfigValue(`ascan.scanner.${argv['scanner-id']}.threshold`);
         console.log(`Rule ${argv['scanner-id']} reset to default`);
       } else if (argv['scanner-id'] && argv.threshold) {
-        await zap.setScannerAlertThreshold(argv['scanner-id'] as number, argv.threshold as string, argv['policy-name'] as string | undefined);
+        await zap.ascan.setScannerAlertThreshold(argv['scanner-id'] as number, argv.threshold as string, argv['policy-name'] as string | undefined);
         console.log(`Scanner ${argv['scanner-id']} threshold set to ${argv.threshold}`);
       } else if (argv['scanner-id'] && argv.strength) {
-        await zap.setScannerAttackStrength(argv['scanner-id'] as number, argv.strength as string, argv['policy-name'] as string | undefined);
+        await zap.ascan.setScannerAttackStrength(argv['scanner-id'] as number, argv.strength as string, argv['policy-name'] as string | undefined);
         console.log(`Scanner ${argv['scanner-id']} strength set to ${argv.strength}`);
       } else {
         console.log('No action specified. Use --list, --reset, --reset-all, or provide --scanner-id with --threshold or --strength');
-        const configs = await zap.getAllRuleConfigs();
+        const configs = await zap.core.getAllRuleConfigs();
         console.log('\nCurrent Rule Configurations:');
         console.log(JSON.stringify(configs, null, 2));
       }

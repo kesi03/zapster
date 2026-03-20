@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 import { AzureDevOpsService } from '../services/AzureDevOpsService';
 
 export const createTestResultCommand: yargs.CommandModule = {
@@ -59,12 +59,12 @@ export const createTestResultCommand: yargs.CommandModule = {
     console.log('Creating Azure DevOps test result...');
 
     try {
-      const alertsResponse = await zap.getAlerts(argv.baseUrl as string | undefined);
+      const alertsResponse = await zap.alerts.getAlerts(argv.baseUrl as string | undefined);
       const alerts = alertsResponse.alerts;
 
       console.log(`Found ${alerts.length} alerts to convert to test results`);
 
-      const testResults = alerts.map((alert) => ({
+      const testResults = alerts.map((alert: any) => ({
         name: `${alert.alert} - ${alert.url}`,
         passed: alert.risk === 'Low' || alert.risk === 'Informational',
         errorMessage: alert.risk !== 'Low' && alert.risk !== 'Informational' 

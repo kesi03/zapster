@@ -1,2 +1,2 @@
-export * from './ZapClient';
+export { ZapClient } from '../zap/ZapClient';
 export * from './AzureDevOpsService';

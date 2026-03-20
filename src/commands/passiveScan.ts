@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 
 export const passiveScanCommand: yargs.CommandModule = {
   command: 'passiveScan',
@@ -31,16 +31,16 @@ export const passiveScanCommand: yargs.CommandModule = {
 
     try {
       if (argv.status) {
-        const records = await zap.passiveScanRecordsToScan();
+        const records = await zap.pscan.passiveScanRecordsToScan();
         console.log(`Passive scan records pending: ${records.count}`);
       } else if (argv.enable) {
-        await zap.passiveScanEnable();
+        await zap.pscan.passiveScanEnable();
         console.log('Passive scanning enabled');
       } else if (argv.disable) {
-        await zap.passiveScanDisable();
+        await zap.pscan.passiveScanDisable();
         console.log('Passive scanning disabled');
       } else {
-        const records = await zap.passiveScanRecordsToScan();
+        const records = await zap.pscan.passiveScanRecordsToScan();
         console.log(`Passive scan records pending: ${records.count}`);
       }
     } catch (error: any) {

@@ -1,7 +1,7 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 import { Alert } from '../types';
 
 function generateJUnitXml(alerts: Alert[], title: string): string {
@@ -76,7 +76,7 @@ export const createJUnitResultsCommand: yargs.CommandModule = {
     console.log('Generating JUnit results...');
 
     try {
-      const alertsResponse = await zap.getAlerts(argv.baseUrl as string | undefined);
+      const alertsResponse = await zap.alerts.getAlerts(argv.baseUrl as string | undefined);
       const alerts = alertsResponse.alerts;
 
       console.log(`Found ${alerts.length} alerts`);
@@ -89,7 +89,7 @@ export const createJUnitResultsCommand: yargs.CommandModule = {
 
       console.log(`JUnit results saved to: ${outputPath}`);
       console.log(`Test cases: ${alerts.length}`);
-      console.log(`Failures: ${alerts.filter(a => a.risk === 'High' || a.risk === 'Medium').length}`);
+      console.log(`Failures: ${alerts.filter((a: Alert) => a.risk === 'High' || a.risk === 'Medium').length}`);
     } catch (error: any) {
       console.error('Error:', error.message);
       process.exit(1);

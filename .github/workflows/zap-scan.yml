@@ -11,6 +11,10 @@ jobs:
   zap-scan:
     name: OWASP ZAP Security Scan
     runs-on: ubuntu-latest
+    env:
+      ZAP_HOST: localhost
+      ZAP_PORT: 8080
+      ZAP_API_KEY: zapster-api-key
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,59 +61,27 @@ jobs:
 
       - name: Get ZAP Version
         run: npm run zap:version
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Run Spider Scan
         run: npm run baseScan -- --url http://localhost:3000 --timeout 120000
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Run Passive Scan
         run: npm run passiveScan -- --enable
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Run Active Scan
         run: npm run activeScan -- --url http://localhost:3000 --timeout 300000
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Generate JSON Report
         run: npm run getReport -- --format json --output zap-results/report.json
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Generate HTML Report
         run: npm run getReport -- --format html --output zap-results/report.html
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Generate XML Report
         run: npm run getReport -- --format xml --output zap-results/report.xml
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Generate JUnit Results
         run: npm run createJUnitResults -- --output zap-results/junit-results.xml --title "ZAP Security Scan"
-        env:
-          ZAP_HOST: localhost
-          ZAP_PORT: 8080
-          ZAP_API_KEY: zapster-api-key
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4

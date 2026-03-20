@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 
 export const getLogsCommand: yargs.CommandModule = {
   command: 'getLogs',
@@ -15,7 +15,7 @@ export const getLogsCommand: yargs.CommandModule = {
     });
 
     try {
-      const version = await zap.getVersion();
+      const version = await zap.core.getVersion();
       console.log(`ZAP Version: ${version}`);
       console.log('Log level configuration retrieved via API.');
       console.log('\nNote: Full log retrieval requires direct file access to ZAP logs.');

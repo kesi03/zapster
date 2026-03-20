@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 import { AzureDevOpsService } from '../services/AzureDevOpsService';
 
 export const createWorkItemCommand: yargs.CommandModule = {
@@ -91,8 +91,8 @@ export const createWorkItemCommand: yargs.CommandModule = {
       const thresholdIndex = riskLevels.indexOf((argv.threshold as string) || 'Medium');
 
       if (argv['alert-id']) {
-        const alertsResponse = await zap.getAlerts(argv['base-url'] as string | undefined);
-        const alert = alertsResponse.alerts.find((a) => a.id === (argv['alert-id'] as number));
+        const alertsResponse = await zap.alerts.getAlerts(argv['base-url'] as string | undefined);
+        const alert = alertsResponse.alerts.find((a: any) => a.id === (argv['alert-id'] as number));
 
         if (!alert) {
           console.error(`Alert with ID ${argv['alert-id']} not found`);
@@ -109,7 +109,7 @@ export const createWorkItemCommand: yargs.CommandModule = {
         console.log(`Work Item ID: ${workItem.id}`);
         console.log(`URL: ${workItem.url}`);
       } else {
-        const alertsResponse = await zap.getAlerts(argv['base-url'] as string | undefined);
+        const alertsResponse = await zap.alerts.getAlerts(argv['base-url'] as string | undefined);
         const alerts = alertsResponse.alerts.filter(
           (a) => riskLevels.indexOf(a.risk) >= thresholdIndex
         );

@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 
 export const baseScanCommand: yargs.CommandModule = {
   command: 'baseScan',
@@ -47,21 +47,21 @@ export const baseScanCommand: yargs.CommandModule = {
     console.log(`Host: ${argv.host}:${argv.port}`);
 
     try {
-      const version = await zap.getVersion();
+      const version = await zap.core.getVersion();
       console.log(`Connected to ZAP version: ${version}`);
 
-      const result = await zap.spiderScan(
+      const result = await zap.spider.spiderScan(
         argv.url as string,
         argv.maxDepth as number | undefined,
         argv.maxChildren as number | undefined,
         argv.recurse as boolean | undefined
-      );
+      ) as { scan: string };
 
       const scanId = result.scan;
       console.log(`Scan started with ID: ${scanId}`);
 
       const startTime = Date.now();
-      let status = await zap.spiderStatus(scanId);
+      let status = await zap.spider.spiderStatus(scanId);
 
       while (
         status.state !== 'FINISHED' &&
@@ -70,12 +70,12 @@ export const baseScanCommand: yargs.CommandModule = {
       ) {
         console.log(`Scan progress: ${status.progress}%`);
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 2000));
-        status = await zap.spiderStatus(scanId);
+        status = await zap.spider.spiderStatus(scanId);
       }
 
       if (status.state === 'FINISHED') {
         console.log('Spider scan completed successfully!');
-        const fullResults = await zap.spiderFullResults(scanId);
+        const fullResults = await zap.spider.spiderFullResults(scanId);
         console.log(`Found ${fullResults.results?.length || 0} URLs`);
       } else {
         console.log(`Scan ended with status: ${status.state}`);

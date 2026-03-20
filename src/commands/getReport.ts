@@ -1,7 +1,7 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ZapClient } from '../services/ZapClient';
+import { ZapClient } from '../zap/ZapClient';
 
 export const getReportCommand: yargs.CommandModule = {
   command: 'getReport',
@@ -48,17 +48,17 @@ export const getReportCommand: yargs.CommandModule = {
 
       switch (format) {
         case 'xml':
-          report = await zap.getXmlReport();
+          report = await zap.reports.getXmlReport();
           break;
         case 'json':
-          const jsonReport = await zap.getJsonReport();
+          const jsonReport = await zap.reports.getJsonReport();
           report = JSON.stringify(jsonReport, null, 2);
           break;
         case 'md':
-          report = await zap.getMdReport();
+          report = await zap.reports.getMdReport();
           break;
         case 'html':
-          report = await zap.getHtmlReport();
+          report = await zap.reports.getHtmlReport();
           break;
         default:
           throw new Error(`Unsupported format: ${format}`);

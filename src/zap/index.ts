@@ -1,0 +1,16 @@
+export { ZapBase } from './zapBase';
+export { CoreAPI } from './core';
+export { SpiderAPI, AjaxSpiderAPI } from './spider';
+export { ActiveScanAPI } from './ascan';
+export { PassiveScanAPI } from './pscan';
+export { AlertsAPI } from './alerts';
+export { ReportsAPI } from './reports';
+export { ContextAPI } from './context';
+export { UsersAPI } from './users';
+export { AuthAPI } from './auth';
+export { ScriptsAPI } from './scripts';
+export { ForcedBrowseAPI } from './forcedBrowse';
+export { SearchAPI } from './search';
+export { HttpSessionsAPI } from './httpSessions';
+export { BreakAPI } from './break';
+export { ProxyAPI } from './proxy';
