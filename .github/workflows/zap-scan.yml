@@ -15,6 +15,7 @@ jobs:
       ZAP_HOST: localhost
       ZAP_PORT: 8080
       ZAP_API_KEY: zapster-api-key
+      TARGET_URL: http://localhost:3000
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build project
+        run: npm run build
+
       - name: Create results directory
         run: mkdir -p zap-results
 
@@ -35,59 +39,86 @@ jobs:
         run: |
           docker run -d --name juice-shop -p 3000:3000 bkimminich/juice-shop:latest
           echo "Waiting for Juice Shop to start..."
-          for i in {1..60}; do
-            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+          for i in {1..90}; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\|301\|302"; then
               echo "Juice Shop is ready!"
               break
             fi
-            echo "Waiting for Juice Shop... ($i/60)"
+            if [ $i -eq 90 ]; then
+              echo "Juice Shop failed to start"
+              docker logs juice-shop
+              exit 1
+            fi
+            echo "Waiting for Juice Shop... ($i/90)"
             sleep 2
           done
 
       - name: Start ZAP daemon
         run: |
-          docker run -d --name zap -p 8080:8080 -v ${{ github.workspace }}/zap-results:/zap/wrk:rw \
+          docker run -d --name zap \
+            -p 8080:8080 \
+            -p 8090:8090 \
+            -v ${{ github.workspace }}/zap-results:/zap/wrk:rw \
             -e ZAP_API_KEY=zapster-api-key \
-            mockholm/zap-daemon
+            -e ZAP_PORT=8080 \
+            owasp/zap2docker-stable
           echo "Waiting for ZAP to start..."
           for i in {1..60}; do
-            if curl -s http://localhost:8080 > /dev/null 2>&1; then
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 | grep -q "200\|302\|401"; then
               echo "ZAP is ready!"
               break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "ZAP failed to start"
+              docker logs zap
+              exit 1
             fi
             echo "Waiting for ZAP... ($i/60)"
             sleep 2
           done
 
-      - name: Get ZAP Version
+      - name: Verify ZAP Connection
         run: npm run zap:version
 
-      - name: Run Spider Scan
-        run: npm run baseScan -- --url http://localhost:3000 --timeout 120000
-
-      - name: Run Passive Scan
+      - name: Enable Passive Scanning
         run: npm run passiveScan -- --enable
 
+      - name: Run Spider Scan
+        run: npm run baseScan -- --url ${{ env.TARGET_URL }} --timeout 180000
+
+      - name: Run AJAX Spider Scan
+        run: npm run ajaxScan -- --url ${{ env.TARGET_URL }} --max-duration 5 --timeout 300000
+
       - name: Run Active Scan
-        run: npm run activeScan -- --url http://localhost:3000 --timeout 300000
+        run: npm run activeScan -- --url ${{ env.TARGET_URL }} --timeout 600000
+
+      - name: Run API Scan (optional)
+        if: false  # Set to true if target has an API
+        run: npm run apiScan -- --url ${{ env.TARGET_URL }}/api --timeout 600000
+
+      - name: Get Alerts Summary
+        run: npm run getAlerts -- --summary
 
       - name: Generate JSON Report
-        run: npm run getReport -- --format json --output zap-results/report.json
+        run: npm run getReport -- --format json --output zap-results/report.json --title "ZAP Security Scan Report"
 
       - name: Generate HTML Report
-        run: npm run getReport -- --format html --output zap-results/report.html
+        run: npm run getReport -- --format html --output zap-results/report.html --title "ZAP Security Scan Report"
 
       - name: Generate XML Report
-        run: npm run getReport -- --format xml --output zap-results/report.xml
+        run: npm run getReport -- --format xml --output zap-results/report.xml --title "ZAP Security Scan Report"
 
       - name: Generate JUnit Results
         run: npm run createJUnitResults -- --output zap-results/junit-results.xml --title "ZAP Security Scan"
 
+      - name: Generate Alert JSON
+        run: npm run getAlerts -- --output zap-results/alerts.json
+
       - name: Upload Reports
         uses: actions/upload-artifact@v4
-        if: always()
+        if: success() || failure()
         with:
-          name: zap-reports
+          name: zap-reports-${{ github.run_number }}
           path: zap-results/
           retention-days: 30
 
@@ -95,14 +126,31 @@ jobs:
         run: |
           echo "## ZAP Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Reports generated in zap-results/" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ env.TARGET_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "**ZAP Version:** $(npm run zap:version --silent)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          
           if [ -f zap-results/report.json ]; then
+            HIGH=$(grep -o '"risk":"HIGH"' zap-results/report.json | wc -l)
+            MEDIUM=$(grep -o '"risk":"MEDIUM"' zap-results/report.json | wc -l)
+            LOW=$(grep -o '"risk":"LOW"' zap-results/report.json | wc -l)
+            INFO=$(grep -o '"risk":"INFORMATIONAL"' zap-results/report.json | wc -l)
+            
             echo "### Alert Summary" >> $GITHUB_STEP_SUMMARY
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            cat zap-results/report.json | head -100 >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "| Risk Level | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|------------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| 🔴 High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟡 Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟢 Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+            echo "| ℹ️ Informational | $INFO |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
           fi
+          
+          echo "### Reports" >> $GITHUB_STEP_SUMMARY
+          echo "- JSON Report: \`zap-results/report.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "- HTML Report: \`zap-results/report.html\`" >> $GITHUB_STEP_SUMMARY
+          echo "- XML Report: \`zap-results/report.xml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- JUnit Results: \`zap-results/junit-results.xml\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup
         if: always()
