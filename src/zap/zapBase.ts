@@ -26,6 +26,7 @@ export class ZapBase {
   protected async request<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.client.get(endpoint, { params });
+      console.log(`[ZAP DEBUG] ${endpoint} =>`, JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error: any) {
       const zapMessage =
