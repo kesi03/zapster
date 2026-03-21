@@ -101,46 +101,46 @@ jobs:
           exit 1
 
       - name: Verify ZAP Connection
-        run: pnpm zap:version
+        run: pnpm run zap:version
 
       - name: Enable Passive Scanning
-        run: pnpm passiveScan -- --enable
+        run: pnpm run passiveScan --enable
 
       - name: Run Spider Scan
-        run: pnpm baseScan -- --url ${{ env.TARGET_URL }} --timeout 180000
+        run: pnpm run baseScan --url ${{ env.TARGET_URL }} --timeout 180000
 
       - name: Run AJAX Spider Scan
-        run: pnpm ajaxScan -- --url ${{ env.TARGET_URL }} --max-duration 5 --timeout 300000
+        run: pnpm run ajaxScan --url ${{ env.TARGET_URL }} --max-duration 5 --timeout 300000
 
       - name: Run Active Scan
-        run: pnpm activeScan -- --url ${{ env.TARGET_URL }} --timeout 600000
+        run: pnpm run activeScan --url ${{ env.TARGET_URL }} --timeout 600000
 
       - name: Get Alerts Summary
-        run: pnpm getAlerts -- --summary
+        run: pnpm run getAlerts --summary
 
       - name: Generate JSON Report
-        run: pnpm getReport -- --format json --workspace zap-results --name report.json --title "ZAP Security Scan Report"
+        run: pnpm run getReport --format json --workspace zap-results --name report.json --title "ZAP Security Scan Report"
 
       - name: Generate HTML Report
-        run: pnpm getReport -- --format html --workspace zap-results --name report.html --title "ZAP Security Scan Report"
+        run: pnpm run getReport --format html --workspace zap-results --name report.html --title "ZAP Security Scan Report"
 
       - name: Generate PDF Report
-        run: pnpm getPdf -- --workspace zap-results --name report.pdf --title "ZAP Security Scan Report"
+        run: pnpm run getPdf --workspace zap-results --name report.pdf --title "ZAP Security Scan Report"
 
       - name: Generate XML Report
-        run: pnpm getReport -- --format xml --workspace zap-results --name report.xml --title "ZAP Security Scan Report"
+        run: pnpm run getReport --format xml --workspace zap-results --name report.xml --title "ZAP Security Scan Report"
 
       - name: Generate JUnit Results
-        run: pnpm createJUnitResults -- --workspace zap-results --name junit-results.xml --title "ZAP Security Scan"
+        run: pnpm run createJUnitResults --workspace zap-results --name junit-results.xml --title "ZAP Security Scan"
 
       - name: Generate Alert JSON
-        run: pnpm getAlerts -- --workspace zap-results --name alerts.json
+        run: pnpm run getAlerts --workspace zap-results --name alerts.json
 
       - name: Generate Excel Report
-        run: pnpm createExcelReport -- --workspace zap-results --name zap-report.xlsx
+        run: pnpm run createExcelReport --workspace zap-results --name zap-report.xlsx
 
       - name: Get Docker Logs
-        run: pnpm getDockerLog -- --image mockholm/zap-daemon --workspace zap-results --name agent.log
+        run: pnpm run getDockerLog --image mockholm/zap-daemon --workspace zap-results --name agent.log
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4
