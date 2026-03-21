@@ -1,8 +1,8 @@
 import yargs from 'yargs';
-import cliProgress from 'cli-progress';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace } from '../utils/workspace';
 import { log } from '../utils/logger';
+import { createProgressBar, startProgress, updateProgress, stopProgress } from '../utils/progress';
 
 export const activeScanCommand: yargs.CommandModule = {
   command: 'activeScan',
@@ -71,17 +71,12 @@ export const activeScanCommand: yargs.CommandModule = {
 
       log.info(`Scan started with ID: ${scanId}`);
 
-      const progressBar = new cliProgress.SingleBar({
-        format: 'Active Scan |{bar}| {percentage}% | Status: {state}',
-        barCompleteChar: '\u2588',
-        barIncompleteChar: '\u2591',
-        hideCursor: true,
-      });
+      const progressBar = createProgressBar('Active Scan |{bar}| {percentage}% | Status: {state}');
 
       const startTime = Date.now();
       let scan = await zap.ascan.activeScanStatus(scanId) as any;
 
-      progressBar.start(100, 0, { state: scan.state || 'RUNNING' });
+      startProgress(progressBar, 100, { state: scan.state || 'RUNNING' });
 
       while (
         scan.state !== 'FINISHED' &&
@@ -89,13 +84,16 @@ export const activeScanCommand: yargs.CommandModule = {
         scan.state !== 'PAUSED' &&
         Date.now() - startTime < ((argv.timeout as number) || 600000)
       ) {
-        progressBar.update(scan.progress || 0, { state: scan.state || 'RUNNING' });
+        updateProgress(progressBar, scan.progress || 0, { state: scan.state || 'RUNNING' });
+        if (!progressBar) {
+          log.info(`Scan progress: ${scan.progress || 0}% - Status: ${scan.state || 'RUNNING'}`);
+        }
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 5000));
         scan = await zap.ascan.activeScanStatus(scanId) as any;
       }
 
-      progressBar.update(100, { state: scan.state || 'FINISHED' });
-      progressBar.stop();
+      updateProgress(progressBar, 100, { state: scan.state || 'FINISHED' });
+      stopProgress(progressBar);
 
       log.info(`Final status: ${scan.state}`);
       log.success('Active scan completed!');

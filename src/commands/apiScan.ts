@@ -1,9 +1,9 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
-import cliProgress from 'cli-progress';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace, getWorkspacePath } from '../utils/workspace';
 import { log } from '../utils/logger';
+import { createProgressBar, startProgress, updateProgress, stopProgress } from '../utils/progress';
 
 export const apiScanCommand: yargs.CommandModule = {
   command: 'apiScan',
@@ -99,30 +99,28 @@ export const apiScanCommand: yargs.CommandModule = {
       const scanId = result.scan;
       log.info(`API scan started with ID: ${scanId}`);
 
-      const progressBar = new cliProgress.SingleBar({
-        format: 'API Scan |{bar}| {percentage}%',
-        barCompleteChar: '\u2588',
-        barIncompleteChar: '\u2591',
-        hideCursor: true,
-      });
+      const progressBar = createProgressBar('API Scan |{bar}| {percentage}%');
 
       const startTime = Date.now();
       let status = '0';
 
-      progressBar.start(100, 0);
+      startProgress(progressBar, 100);
 
       while (parseInt(status) < 100 && Date.now() - startTime < ((argv.timeout as number) || 600000)) {
         const statusResult = await zap.apiScan.status(scanId);
         status = statusResult.status;
-        progressBar.update(parseInt(status, 10));
+        updateProgress(progressBar, parseInt(status, 10));
+        if (!progressBar) {
+          log.info(`API Scan progress: ${status}%`);
+        }
         
         if (status === '100') break;
         
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 5000));
       }
 
-      progressBar.update(100);
-      progressBar.stop();
+      updateProgress(progressBar, 100);
+      stopProgress(progressBar);
 
       log.success('API scan completed!');
 

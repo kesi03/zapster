@@ -1,8 +1,8 @@
 import yargs from 'yargs';
-import cliProgress from 'cli-progress';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace } from '../utils/workspace';
 import { log } from '../utils/logger';
+import { createProgressBar, startProgress, updateProgress, stopProgress } from '../utils/progress';
 
 export const ajaxScanCommand: yargs.CommandModule = {
   command: 'ajaxScan',
@@ -60,18 +60,13 @@ export const ajaxScanCommand: yargs.CommandModule = {
       const result = await zap.ajaxSpider.ajaxSpiderScan(argv.url as string, argv.maxDuration as number | undefined);
       log.info('Scan started');
 
-      const progressBar = new cliProgress.SingleBar({
-        format: 'AJAX Spider |{bar}| {percentage}% | Nodes: {nodes} | Status: {state}',
-        barCompleteChar: '\u2588',
-        barIncompleteChar: '\u2591',
-        hideCursor: true,
-      });
+      const progressBar = createProgressBar('AJAX Spider |{bar}| {percentage}% | Nodes: {nodes} | Status: {state}');
 
       const startTime = Date.now();
       let status = await zap.ajaxSpider.ajaxSpiderStatus();
       const maxDuration = (argv.maxDuration as number) || 0;
 
-      progressBar.start(maxDuration > 0 ? maxDuration * 60 : 100, 0, { state: status.status, nodes: status.nodesVisited });
+      startProgress(progressBar, maxDuration > 0 ? maxDuration * 60 : 100, { state: status.status, nodes: status.nodesVisited });
 
       while (
         status.status.toUpperCase() !== 'STOPPED' &&
@@ -79,13 +74,16 @@ export const ajaxScanCommand: yargs.CommandModule = {
         Date.now() - startTime < ((argv.timeout as number) || 600000)
       ) {
         const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
-        progressBar.update(maxDuration > 0 ? Math.min(elapsedMinutes, maxDuration * 60) : elapsedMinutes, { state: status.status, nodes: status.nodesVisited });
+        const progressValue = maxDuration > 0 ? Math.min(elapsedMinutes, maxDuration * 60) : elapsedMinutes;
+        updateProgress(progressBar, progressValue, { state: status.status, nodes: status.nodesVisited });
+        if (!progressBar) {
+          log.info(`AJAX Spider status: ${status.status} - Nodes visited: ${status.nodesVisited}`);
+        }
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 5000));
         status = await zap.ajaxSpider.ajaxSpiderStatus();
       }
 
-      progressBar.update(progressBar.getTotal(), { state: status.status, nodes: status.nodesVisited });
-      progressBar.stop();
+      stopProgress(progressBar);
 
       log.info(`Final status: ${status.status}`);
       log.info(`Total nodes visited: ${status.nodesVisited}`);

@@ -1,8 +1,8 @@
 import yargs from 'yargs';
-import cliProgress from 'cli-progress';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace } from '../utils/workspace';
 import { log } from '../utils/logger';
+import { createProgressBar, startProgress, updateProgress, stopProgress } from '../utils/progress';
 
 export const baseScanCommand: yargs.CommandModule = {
   command: 'baseScan',
@@ -66,30 +66,28 @@ export const baseScanCommand: yargs.CommandModule = {
 
       log.info(`Scan started with ID: ${scanId}`);
 
-      const progressBar = new cliProgress.SingleBar({
-        format: 'Spider Scan |{bar}| {percentage}% | State: {state}',
-        barCompleteChar: '\u2588',
-        barIncompleteChar: '\u2591',
-        hideCursor: true,
-      });
+      const progressBar = createProgressBar('Spider Scan |{bar}| {percentage}% | State: {state}');
 
       const startTime = Date.now();
       let status = await zap.spider.spiderStatus(scanId);
 
-      progressBar.start(100, 0, { state: status.state || 'RUNNING' });
+      startProgress(progressBar, 100, { state: status.state || 'RUNNING' });
 
       while (
         status.state !== 'FINISHED' &&
         status.state !== 'STOPPED' &&
         Date.now() - startTime < ((argv.timeout as number) || 300000)
       ) {
-        progressBar.update(status.progress, { state: status.state || 'RUNNING' });
+        updateProgress(progressBar, status.progress, { state: status.state || 'RUNNING' });
+        if (!progressBar) {
+          log.info(`Scan progress: ${status.progress}% - State: ${status.state || 'RUNNING'}`);
+        }
         await new Promise((resolve) => setTimeout(resolve, (argv.pollInterval as number) || 2000));
         status = await zap.spider.spiderStatus(scanId);
       }
 
-      progressBar.update(100, { state: status.state || 'FINISHED' });
-      progressBar.stop();
+      updateProgress(progressBar, 100, { state: status.state || 'FINISHED' });
+      stopProgress(progressBar);
 
       if (status.state === 'FINISHED') {
         log.success('Spider scan completed successfully!');
