@@ -25,10 +25,15 @@ async function copyFileToContainer(containerId: string, hostFilePath: string): P
 
   const container = docker.getContainer(containerId);
 
-  await container.exec({
+  const mkdirExec = await container.exec({
     Cmd: ['mkdir', '-p', containerPath],
     AttachStdout: true,
     AttachStderr: true,
+  });
+  const mkdirStream = await mkdirExec.start({ hijack: true, stdin: false });
+  await new Promise<void>((resolve) => {
+    mkdirStream.on('end', resolve);
+    mkdirStream.on('error', resolve);
   });
 
   const tarStream = tar.pack(path.dirname(hostFilePath), {
