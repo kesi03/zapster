@@ -1,0 +1,144 @@
+name: ZAP Automation Scan
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      plan_file:
+        description: 'Path to ZAP automation plan file'
+        required: true
+        default: 'examples/zap-automation.yaml'
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+
+jobs:
+  zap-automation:
+    name: ZAP Automation Scan
+    runs-on: ubuntu-latest
+    env:
+      ZAP_HOST: localhost
+      ZAP_PORT: 8080
+      ZAP_API_KEY: zapster-api-key
+      PLAN_FILE: ${{ inputs.plan_file || 'examples/zap-automation.yaml' }}
+      DEBUG: ${{ inputs.debug || 'false' }}
+      ZAPSTER_WORKSPACE: zap-results
+    services:
+      zap:
+        image: owasp/zap2docker-stable
+        ports:
+          - 8080:8080
+          - 8090:8090
+        env:
+          ZAP_API_KEY: zapster-api-key
+
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+        options: --shm-size=512m
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: mkdir -p $ZAPSTER_WORKSPACE
+
+      - name: Wait for Juice Shop to be ready
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Juice Shop is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "Juice Shop failed to start within $timeout seconds"
+          exit 1
+
+      - name: Wait for ZAP to be ready
+        run: |
+          echo "Waiting for ZAP to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 | grep -qE "200|302|401"; then
+              echo "ZAP is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "ZAP failed to start within $timeout seconds"
+          exit 1
+
+      - name: Verify ZAP Connection
+        run: pnpm run zap:version
+
+      - name: Run ZAP Automation
+        run: pnpm automate --file ${{ env.PLAN_FILE }}
+
+      - name: Get Docker Logs
+        run: pnpm run getDockerLog --image owasp/zap2docker-stable --workspace zap-results --name agent.log
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: zap-automation-reports-${{ github.run_number }}-${{ github.sha }}
+          path: zap-results/
+          retention-days: 30
+
+      - name: Display Results Summary
+        run: |
+          echo "## ZAP Automation Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Plan File:** ${{ env.PLAN_FILE }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f zap-results/report.json ]; then
+            HIGH=$(grep -o '"risk":"HIGH"' zap-results/report.json | wc -l)
+            MEDIUM=$(grep -o '"risk":"MEDIUM"' zap-results/report.json | wc -l)
+            LOW=$(grep -o '"risk":"LOW"' zap-results/report.json | wc -l)
+            INFO=$(grep -o '"risk":"INFORMATIONAL"' zap-results/report.json | wc -l)
+            
+            echo "### Alert Summary" >> $GITHUB_STEP_SUMMARY
+            echo "| Risk Level | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|------------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+            echo "| Informational | $INFO |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Reports" >> $GITHUB_STEP_SUMMARY
+          echo "- JSON Report: \`zap-results/report.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "- HTML Report: \`zap-results/report.html\`" >> $GITHUB_STEP_SUMMARY
+          echo "- XML Report: \`zap-results/report.xml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Agent Log: \`zap-results/agent.log\`" >> $GITHUB_STEP_SUMMARY

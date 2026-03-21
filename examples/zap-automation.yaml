@@ -1,0 +1,49 @@
+name: "OWASP ZAP Scan Plan"
+type: "policy"
+
+rules:
+  - name: "spider"
+    parameters:
+      url: "${target}"
+      maxDepth: 10
+      maxChildren: 100
+
+  - name: "spiderAjax"
+    parameters:
+      url: "${target}"
+      maxDuration: 5
+
+  - name: "activeScan"
+    parameters:
+      contextName: "Automated Scan"
+      user: null
+
+env:
+  target: "http://juice-shop:3000"
+
+jobs:
+  - type: "passiveScan-config"
+    parameters:
+      maxAlertsPerRule: 0
+
+  - type: "spider"
+    parameters:
+      url: "${target}"
+      maxDepth: 10
+
+  - type: "spiderAjax"
+    parameters:
+      url: "${target}"
+      maxDuration: 5
+
+  - type: "activeScan"
+    parameters:
+      context: "Automated Scan"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      formats:
+        - "json"
+        - "html"
+        - "xml"

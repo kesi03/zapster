@@ -66,8 +66,11 @@ This document tracks ZAP API methods that are not covered by commands in this pr
 - `addAlert`, `deleteAlert`, `deleteAlerts`, `deleteAllAlerts`, `updateAlert`, `updateAlertsConfidence`, `updateAlertsRisk`
 - `alert`, `alertCountsByRisk`, `alertsByRisk`, `numberOfAlerts`
 
-### automation - 3 methods
+### automation - 3 methods (IMPLEMENTED)
 - `endDelayJob`, `runPlan`, `planProgress`
+- **Command:** `pnpm automate --file <plan.yaml>`
+- **File:** `src/commands/automate.ts`
+- **Example:** `examples/zap-automation.yaml`
 
 ### break - 9 methods
 - `addHttpBreakpoint`, `break`, `drop`, `removeHttpBreakpoint`, `setHttpMessage`, `step`

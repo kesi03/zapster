@@ -31,7 +31,8 @@
     "createTestResult": "ts-node src/index.ts createTestResult",
     "createWorkItem": "ts-node src/index.ts createWorkItem",
     "createExcelReport": "ts-node src/index.ts createExcelReport",
-    "configureRules": "ts-node src/index.ts configureRules"
+    "configureRules": "ts-node src/index.ts configureRules",
+    "automate": "ts-node src/index.ts automate"
   },
   "keywords": [
     "zap",
@@ -51,6 +52,7 @@
     "playwright": "^1.58.2",
     "winston": "^3.19.0",
     "xlsx": "^0.18.5",
+    "yaml": "^2.3.4",
     "yargs": "^17.7.2"
   },
   "devDependencies": {

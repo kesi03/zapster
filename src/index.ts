@@ -24,6 +24,7 @@ import { forcedBrowseCommand } from './commands/forcedBrowse';
 import { httpSessionsCommand } from './commands/httpSessions';
 import { breakCommand } from './commands/break';
 import { proxyCommand } from './commands/proxy';
+import { automateCommand } from './commands/automate';
 import { setDebug } from './utils/logger';
 
 const debugEnabled = process.env.DEBUG === 'true';
@@ -58,6 +59,7 @@ yargs(hideBin(process.argv))
   .command(httpSessionsCommand)
   .command(breakCommand)
   .command(proxyCommand)
+  .command(automateCommand)
   .option('host', {
     alias: 'H',
     type: 'string',
