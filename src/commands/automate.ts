@@ -2,6 +2,7 @@ import yargs from 'yargs';
 import * as fs from 'fs';
 import * as yaml from 'yaml';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import Docker from 'dockerode';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace, getWorkspacePath } from '../utils/workspace';
@@ -18,28 +19,10 @@ async function findContainerByImage(imageName: string): Promise<Docker.Container
   ) || null;
 }
 
-async function copyFileToContainer(containerId: string, hostFilePath: string): Promise<string> {
-  const containerPath = '/home/zap/config/examples';
-  const filename = path.basename(hostFilePath);
-  
-  const fileContent = fs.readFileSync(hostFilePath);
-  const tarBuffer = await new Promise<Buffer>((resolve, reject) => {
-    const tar = require('tar');
-    const tarStream = tar.pack();
-    const chunks: Buffer[] = [];
-    
-    tarStream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    tarStream.on('end', () => resolve(Buffer.concat(chunks)));
-    tarStream.on('error', reject);
-    
-    tarStream.entry({ name: filename }, fileContent);
-    tarStream.end();
-  });
-  
-  const container = docker.getContainer(containerId);
-  await container.putArchive(tarBuffer, { path: containerPath, noOverwriteDirNonDir: false });
-  
-  return `${containerPath}/${filename}`;
+function copyFileToContainer(containerId: string, hostFilePath: string): string {
+  const containerPath = `/home/zap/config/examples/${path.basename(hostFilePath)}`;
+  execSync(`docker cp "${hostFilePath}" ${containerId}:${containerPath}`, { stdio: 'pipe' });
+  return containerPath;
 }
 
 export const automateCommand: yargs.CommandModule = {
@@ -120,7 +103,7 @@ export const automateCommand: yargs.CommandModule = {
           log.info(`Found container: ${containerInfo.Names[0] || containerId.substring(0, 12)}`);
         }
 
-        const containerPath = await copyFileToContainer(containerId!, planFile);
+        const containerPath = copyFileToContainer(containerId!, planFile);
         log.info(`Copied plan to container: ${containerPath}`);
         planPath = containerPath;
       } else {
