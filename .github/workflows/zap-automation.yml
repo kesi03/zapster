@@ -29,7 +29,7 @@ jobs:
       ZAPSTER_WORKSPACE: zap-results
     services:
       zap:
-        image: owasp/zap2docker-stable
+        image: mockholm/zap-daemon
         ports:
           - 8080:8080
           - 8090:8090
@@ -104,7 +104,7 @@ jobs:
         run: pnpm automate --file ${{ env.PLAN_FILE }}
 
       - name: Get Docker Logs
-        run: pnpm run getDockerLog --image owasp/zap2docker-stable --workspace zap-results --name agent.log
+        run: pnpm run getDockerLog --image mockholm/zap-daemon --workspace zap-results --name agent.log
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4
