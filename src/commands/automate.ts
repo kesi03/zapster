@@ -1,10 +1,31 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
 import * as yaml from 'yaml';
+import * as path from 'path';
+import { execSync } from 'child_process';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace, getWorkspacePath } from '../utils/workspace';
 import { log } from '../utils/logger';
 import { createProgressBar, updateProgress, stopProgress } from '../utils/progress';
+
+function findContainerByPort(port: number): string | null {
+  try {
+    const result = execSync(`docker ps --filter "expose=${port}" --format "{{.ID}}"`, { encoding: 'utf-8' });
+    return result.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function copyFileToContainer(containerId: string, hostFilePath: string): string {
+  const containerPath = `/zap/automation/${path.basename(hostFilePath)}`;
+  try {
+    execSync(`docker cp "${hostFilePath}" ${containerId}:${containerPath}`, { stdio: 'pipe' });
+    return containerPath;
+  } catch (error: any) {
+    throw new Error(`Failed to copy file to container: ${error.message}`);
+  }
+}
 
 export const automateCommand: yargs.CommandModule = {
   command: 'automate',
@@ -21,6 +42,11 @@ export const automateCommand: yargs.CommandModule = {
         alias: 'w',
         type: 'string',
         description: 'Workspace directory for outputs',
+      })
+      .option('container', {
+        alias: 'c',
+        type: 'string',
+        description: 'Docker container name/ID (auto-detected from port if not provided)',
       });
   },
   handler: async (argv) => {
@@ -56,7 +82,28 @@ export const automateCommand: yargs.CommandModule = {
       const progressBar = createProgressBar('Automation |{bar}| {percentage}% | Job: {job}');
       updateProgress(progressBar, 0, { job: 'Starting...' });
 
-      await zap.automation.runPlan(planFile);
+      let planPath = planFile;
+      const port = (argv.port as number) || 8080;
+      const containerName = argv.container as string | undefined;
+
+      if (!containerName) {
+        log.info(`Auto-detecting container for port ${port}...`);
+        const detected = findContainerByPort(port);
+        if (detected) {
+          log.success(`Found container: ${detected}`);
+          const containerPath = copyFileToContainer(detected, planFile);
+          log.info(`Copied plan to container: ${containerPath}`);
+          planPath = containerPath;
+        } else {
+          log.warn('No container found - assuming file path is accessible inside container');
+        }
+      } else {
+        const containerPath = copyFileToContainer(containerName, planFile);
+        log.info(`Copied plan to container: ${containerPath}`);
+        planPath = containerPath;
+      }
+
+      await zap.automation.runPlan(planPath);
 
       let done = false;
       let lastProgress = 0;

@@ -101,7 +101,7 @@ jobs:
         run: pnpm run zap:version
 
       - name: Run ZAP Automation
-        run: pnpm automate --file ${{ env.PLAN_FILE }}
+        run: pnpm automate --file ${{ env.PLAN_FILE }} --container zap-automation-zap-1
 
       - name: Get Docker Logs
         run: pnpm run getDockerLog --image mockholm/zap-daemon --workspace zap-results --name agent.log

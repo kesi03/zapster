@@ -2,7 +2,7 @@ import { ZapBase } from './zapBase';
 
 export class AutomationAPI extends ZapBase {
   async runPlan(planPath: string): Promise<void> {
-    await this.request('/JSON/automation/action/runPlan', { plan: planPath });
+    await this.request('/JSON/automation/action/runPlan', { filePath: planPath });
   }
 
   async planProgress(): Promise<{ jobManager: string; jobThreads: any[] }> {
