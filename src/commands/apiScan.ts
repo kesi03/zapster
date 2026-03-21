@@ -80,7 +80,7 @@ export const apiScanCommand: yargs.CommandModule = {
     });
 
     log.info(`Starting API scan on: ${argv.url}`);
-    log.info(`Host: ${argv.host}:${argv.port}`);
+    log.info(`Zap Daemon Host: ${argv.host}:${argv.port}`);
 
     try {
       const version = await zap.core.getVersion();

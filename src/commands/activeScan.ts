@@ -48,7 +48,7 @@ export const activeScanCommand: yargs.CommandModule = {
     });
 
     log.info(`Starting active scan on: ${argv.url}`);
-    log.info(`Host: ${argv.host}:${argv.port}`);
+    log.info(`Zap DaemonHost: ${argv.host}:${argv.port}`);
 
     try {
       const version = await zap.core.getVersion();

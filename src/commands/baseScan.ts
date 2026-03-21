@@ -48,7 +48,7 @@ export const baseScanCommand: yargs.CommandModule = {
     });
 
     log.info(`Starting spider scan on: ${argv.url}`);
-    log.info(`Host: ${argv.host}:${argv.port}`);
+    log.info(`Zap Daemon Host: ${argv.host}:${argv.port}`);
     log.info(`Max Depth: ${argv.maxDepth || 'unlimited'}`);
     log.info(`Max Children: ${argv.maxChildren || 'unlimited'}`);
     log.info(`Recurse: ${argv.recurse}`);

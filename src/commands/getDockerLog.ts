@@ -6,6 +6,44 @@ import { log } from '../utils/logger';
 
 const docker = new Docker();
 
+function parseDockerLogs(buffer: Buffer): string {
+  const lines: string[] = [];
+  let offset = 0;
+  
+  while (offset < buffer.length) {
+    if (offset + 8 > buffer.length) break;
+    
+    const streamType = buffer.readUInt8(offset);
+    if (streamType !== 1 && streamType !== 2) {
+      offset++;
+      continue;
+    }
+    
+    const size = buffer.readUInt32BE(offset + 4);
+    offset += 8;
+    
+    if (offset + size > buffer.length) {
+      const remaining = buffer.slice(offset).toString('utf-8').trim();
+      if (remaining) lines.push(remaining);
+      break;
+    }
+    
+    const content = buffer.slice(offset, offset + size).toString('utf-8');
+    const lineParts = content.split('\n');
+    
+    for (const part of lineParts) {
+      const trimmed = part.trim();
+      if (trimmed) {
+        lines.push(trimmed);
+      }
+    }
+    
+    offset += size;
+  }
+  
+  return lines.join('\n');
+}
+
 async function findContainerByImage(imageName: string): Promise<Docker.ContainerInfo | null> {
   const containers = await docker.listContainers({ all: true });
   return containers.find(c => 
@@ -80,9 +118,10 @@ export const getDockerLogCommand: yargs.CommandModule = {
         stderr: true,
         tail: tailLines,
         timestamps: true,
+        follow: false,
       });
 
-      const logs = logsBuffer.toString('utf-8');
+      const logs = parseDockerLogs(logsBuffer);
 
       const logPath = getWorkspacePath(filename);
       fs.writeFileSync(logPath, logs, 'utf-8');
