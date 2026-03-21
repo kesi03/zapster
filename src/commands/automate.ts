@@ -2,29 +2,44 @@ import yargs from 'yargs';
 import * as fs from 'fs';
 import * as yaml from 'yaml';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import Docker from 'dockerode';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace, getWorkspacePath } from '../utils/workspace';
 import { log } from '../utils/logger';
 import { createProgressBar, updateProgress, stopProgress } from '../utils/progress';
 
-function findContainerByPort(port: number): string | null {
-  try {
-    const result = execSync(`docker ps --filter "expose=${port}" --format "{{.ID}}"`, { encoding: 'utf-8' });
-    return result.trim() || null;
-  } catch {
-    return null;
-  }
+const docker = new Docker();
+
+async function findContainerByImage(imageName: string): Promise<Docker.ContainerInfo | null> {
+  const containers = await docker.listContainers({ all: true });
+  return containers.find(c => 
+    c.Image === imageName || 
+    c.Image.startsWith(imageName)
+  ) || null;
 }
 
-function copyFileToContainer(containerId: string, hostFilePath: string): string {
-  const containerPath = `/zap/automation/${path.basename(hostFilePath)}`;
-  try {
-    execSync(`docker cp "${hostFilePath}" ${containerId}:${containerPath}`, { stdio: 'pipe' });
-    return containerPath;
-  } catch (error: any) {
-    throw new Error(`Failed to copy file to container: ${error.message}`);
-  }
+async function copyFileToContainer(containerId: string, hostFilePath: string): Promise<string> {
+  const containerPath = '/home/zap/config/examples';
+  const filename = path.basename(hostFilePath);
+  
+  const fileContent = fs.readFileSync(hostFilePath);
+  const tarBuffer = await new Promise<Buffer>((resolve, reject) => {
+    const tar = require('tar');
+    const tarStream = tar.pack();
+    const chunks: Buffer[] = [];
+    
+    tarStream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    tarStream.on('end', () => resolve(Buffer.concat(chunks)));
+    tarStream.on('error', reject);
+    
+    tarStream.entry({ name: filename }, fileContent);
+    tarStream.end();
+  });
+  
+  const container = docker.getContainer(containerId);
+  await container.putArchive(tarBuffer, { path: containerPath, noOverwriteDirNonDir: false });
+  
+  return `${containerPath}/${filename}`;
 }
 
 export const automateCommand: yargs.CommandModule = {
@@ -46,7 +61,12 @@ export const automateCommand: yargs.CommandModule = {
       .option('container', {
         alias: 'c',
         type: 'string',
-        description: 'Docker container name/ID (auto-detected from port if not provided)',
+        description: 'Docker container name or ID',
+      })
+      .option('image', {
+        alias: 'i',
+        type: 'string',
+        description: 'Docker image name to find container by',
       });
   },
   handler: async (argv) => {
@@ -83,24 +103,28 @@ export const automateCommand: yargs.CommandModule = {
       updateProgress(progressBar, 0, { job: 'Starting...' });
 
       let planPath = planFile;
-      const port = (argv.port as number) || 8080;
-      const containerName = argv.container as string | undefined;
+      const containerArg = argv.container as string | undefined;
+      const imageArg = argv.image as string | undefined;
 
-      if (!containerName) {
-        log.info(`Auto-detecting container for port ${port}...`);
-        const detected = findContainerByPort(port);
-        if (detected) {
-          log.success(`Found container: ${detected}`);
-          const containerPath = copyFileToContainer(detected, planFile);
-          log.info(`Copied plan to container: ${containerPath}`);
-          planPath = containerPath;
-        } else {
-          log.warn('No container found - assuming file path is accessible inside container');
+      if (containerArg || imageArg) {
+        let containerId = containerArg;
+        
+        if (!containerId && imageArg) {
+          log.info(`Finding container with image: ${imageArg}`);
+          const containerInfo = await findContainerByImage(imageArg);
+          if (!containerInfo) {
+            log.error(`No container found with image: ${imageArg}`);
+            process.exit(1);
+          }
+          containerId = containerInfo.Id;
+          log.info(`Found container: ${containerInfo.Names[0] || containerId.substring(0, 12)}`);
         }
-      } else {
-        const containerPath = copyFileToContainer(containerName, planFile);
+
+        const containerPath = await copyFileToContainer(containerId!, planFile);
         log.info(`Copied plan to container: ${containerPath}`);
         planPath = containerPath;
+      } else {
+        log.info('No container specified - using local file path');
       }
 
       await zap.automation.runPlan(planPath);
