@@ -23,11 +23,18 @@ async function copyFileToContainer(containerId: string, hostFilePath: string): P
   const containerPath = '/home/zap/config/examples';
   const filename = path.basename(hostFilePath);
 
+  const container = docker.getContainer(containerId);
+
+  await container.exec({
+    Cmd: ['mkdir', '-p', containerPath],
+    AttachStdout: true,
+    AttachStderr: true,
+  });
+
   const tarStream = tar.pack(path.dirname(hostFilePath), {
     entries: [filename],
   });
 
-  const container = docker.getContainer(containerId);
   await container.putArchive(tarStream, { path: containerPath });
 
   return `${containerPath}/${filename}`;
