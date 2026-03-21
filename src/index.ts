@@ -6,6 +6,7 @@ import { passiveScanCommand } from './commands/passiveScan';
 import { activeScanCommand } from './commands/activeScan';
 import { ajaxScanCommand } from './commands/ajaxScan';
 import { getReportCommand } from './commands/getReport';
+import { getPdfCommand } from './commands/getPdf';
 import { getAlertsCommand } from './commands/getAlerts';
 import { getLogsCommand } from './commands/getLogs';
 import { getDockerLogCommand } from './commands/getDockerLog';
@@ -38,6 +39,7 @@ yargs(hideBin(process.argv))
   .command(activeScanCommand)
   .command(ajaxScanCommand)
   .command(getReportCommand)
+  .command(getPdfCommand)
   .command(getAlertsCommand)
   .command(getLogsCommand)
   .command(getDockerLogCommand)

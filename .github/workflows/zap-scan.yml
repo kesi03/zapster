@@ -55,6 +55,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Build project
         run: npm run build
 
@@ -117,6 +120,9 @@ jobs:
       - name: Generate HTML Report
         run: npm run getReport -- --format html --workspace zap-results --name report.html --title "ZAP Security Scan Report"
 
+      - name: Generate PDF Report
+        run: npm run getPdf -- --workspace zap-results --name report.pdf --title "ZAP Security Scan Report"
+
       - name: Generate XML Report
         run: npm run getReport -- --format xml --workspace zap-results --name report.xml --title "ZAP Security Scan Report"
 
@@ -127,7 +133,7 @@ jobs:
         run: npm run getAlerts -- --workspace zap-results --name alerts.json
 
       - name: Get Docker Logs
-        run: npm run getDockerLog -- --container zap --workspace zap-results --name agent.log
+        run: npm run getDockerLog -- --image mockholm/zap-daemon --workspace zap-results --name agent.log
 
       - name: Download OpenAPI Specification
         run: curl "http://localhost:8080/OPENAPI/openapi.yaml" -o $ZAPSTER_WORKSPACE/zap-openapi.yaml
@@ -166,6 +172,7 @@ jobs:
           echo "### Reports" >> $GITHUB_STEP_SUMMARY
           echo "- JSON Report: \`zap-results/report.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- HTML Report: \`zap-results/report.html\`" >> $GITHUB_STEP_SUMMARY
+          echo "- PDF Report: \`zap-results/report.pdf\`" >> $GITHUB_STEP_SUMMARY
           echo "- XML Report: \`zap-results/report.xml\`" >> $GITHUB_STEP_SUMMARY
           echo "- JUnit Results: \`zap-results/junit-results.xml\`" >> $GITHUB_STEP_SUMMARY
           echo "- Agent Log: \`zap-results/agent.log\`" >> $GITHUB_STEP_SUMMARY

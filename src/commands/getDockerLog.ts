@@ -1,8 +1,18 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import Docker from 'dockerode';
 import { initLoggerWithWorkspace, getWorkspacePath } from '../utils/workspace';
 import { log } from '../utils/logger';
+
+const docker = new Docker();
+
+async function findContainerByImage(imageName: string): Promise<Docker.ContainerInfo | null> {
+  const containers = await docker.listContainers({ all: true });
+  return containers.find(c => 
+    c.Image === imageName || 
+    c.Image.startsWith(imageName)
+  ) || null;
+}
 
 export const getDockerLogCommand: yargs.CommandModule = {
   command: 'getDockerLog',
@@ -12,8 +22,12 @@ export const getDockerLogCommand: yargs.CommandModule = {
       .option('container', {
         alias: 'c',
         type: 'string',
-        demandOption: true,
         description: 'Docker container name or ID',
+      })
+      .option('image', {
+        alias: 'i',
+        type: 'string',
+        description: 'Docker image name to find container by',
       })
       .option('workspace', {
         alias: 'w',
@@ -35,17 +49,40 @@ export const getDockerLogCommand: yargs.CommandModule = {
   },
   handler: async (argv) => {
     initLoggerWithWorkspace();
-    const container = argv.container as string;
     const tailLines = argv.tail as number;
     const filename = (argv.name as string) || 'agent.log';
 
     try {
-      log.info(`Fetching logs for container: ${container}`);
+      let containerId: string | undefined = argv.container as string | undefined;
 
-      const logs = execSync(
-        `docker logs --tail ${tailLines} ${container}`,
-        { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
-      );
+      if (!containerId && argv.image) {
+        log.info(`Finding container with image: ${argv.image}`);
+        const containerInfo = await findContainerByImage(argv.image as string);
+        if (containerInfo) {
+          containerId = containerInfo.Id;
+          log.info(`Found container: ${containerInfo.Names[0] || containerInfo.Id.substring(0, 12)}`);
+        } else {
+          log.error(`No container found with image: ${argv.image}`);
+          process.exit(1);
+        }
+      }
+
+      if (!containerId) {
+        log.error('Either --container or --image must be specified');
+        process.exit(1);
+      }
+
+      log.info(`Fetching logs for container: ${containerId.substring(0, 12)}`);
+
+      const container = docker.getContainer(containerId);
+      const logsBuffer = await container.logs({
+        stdout: true,
+        stderr: true,
+        tail: tailLines,
+        timestamps: true,
+      });
+
+      const logs = logsBuffer.toString('utf-8');
 
       const logPath = getWorkspacePath(filename);
       fs.writeFileSync(logPath, logs, 'utf-8');

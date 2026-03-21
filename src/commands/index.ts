@@ -3,6 +3,7 @@ export * from './passiveScan';
 export * from './activeScan';
 export * from './ajaxScan';
 export * from './getReport';
+export * from './getPdf';
 export * from './getLogs';
 export * from './getDockerLog';
 export * from './createJUnitResults';
