@@ -11,6 +11,10 @@ on:
         description: 'Target URL to scan'
         required: true
         default: 'http://localhost:3000'
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
 
 jobs:
   zap-scan:
@@ -21,7 +25,7 @@ jobs:
       ZAP_PORT: 8080
       ZAP_API_KEY: zapster-api-key
       TARGET_URL: ${{ inputs.target_url || 'http://juice-shop:3000' }}
-      DEBUG: ${{ vars.DEBUG || 'false' }}
+      DEBUG: ${{ inputs.debug || 'false' }}
     services:
       zap:
         image: mockholm/zap-daemon
