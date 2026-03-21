@@ -2,8 +2,8 @@ import yargs from 'yargs';
 import * as fs from 'fs';
 import * as yaml from 'yaml';
 import * as path from 'path';
-import { execSync } from 'child_process';
 import Docker from 'dockerode';
+import tar from 'tar-fs';
 import { ZapClient } from '../zap/ZapClient';
 import { initLoggerWithWorkspace, getWorkspacePath } from '../utils/workspace';
 import { log } from '../utils/logger';
@@ -19,10 +19,18 @@ async function findContainerByImage(imageName: string): Promise<Docker.Container
   ) || null;
 }
 
-function copyFileToContainer(containerId: string, hostFilePath: string): string {
-  const containerPath = `/home/zap/config/examples/${path.basename(hostFilePath)}`;
-  execSync(`docker cp "${hostFilePath}" ${containerId}:${containerPath}`, { stdio: 'pipe' });
-  return containerPath;
+async function copyFileToContainer(containerId: string, hostFilePath: string): Promise<string> {
+  const containerPath = '/home/zap/config/examples';
+  const filename = path.basename(hostFilePath);
+
+  const tarStream = tar.pack(path.dirname(hostFilePath), {
+    entries: [filename],
+  });
+
+  const container = docker.getContainer(containerId);
+  await container.putArchive(tarStream, { path: containerPath });
+
+  return `${containerPath}/${filename}`;
 }
 
 export const automateCommand: yargs.CommandModule = {
@@ -103,7 +111,7 @@ export const automateCommand: yargs.CommandModule = {
           log.info(`Found container: ${containerInfo.Names[0] || containerId.substring(0, 12)}`);
         }
 
-        const containerPath = copyFileToContainer(containerId!, planFile);
+        const containerPath = await copyFileToContainer(containerId!, planFile);
         log.info(`Copied plan to container: ${containerPath}`);
         planPath = containerPath;
       } else {
