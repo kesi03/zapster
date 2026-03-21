@@ -6,7 +6,14 @@ export class AutomationAPI extends ZapBase {
     return result.planId;
   }
 
-  async planProgress(planId: string): Promise<{ jobManager: string; jobThreads: any[] }> {
+  async planProgress(planId: string): Promise<{
+    warn: string[];
+    planId: number;
+    started: string;
+    finished: string;
+    error: string[];
+    info: string[];
+  }> {
     return this.request('/JSON/automation/view/planProgress/', { planId });
   }
 

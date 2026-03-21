@@ -139,34 +139,26 @@ export const automateCommand: yargs.CommandModule = {
 
       while (!done) {
         const progress = await zap.automation.planProgress(planId);
-        log.info(`Progress response: ${JSON.stringify(progress)}`);
         
-        const jobManager = progress.jobManager || 'unknown';
-        const jobThreads = progress.jobThreads || [];
-        
-        const totalJobs = jobThreads.length;
-        const completedJobs = jobThreads.filter((j: any) => j.currentState === 'FINISHED').length;
-        const currentJob = jobThreads.find((j: any) => j.currentState === 'RUNNING');
-        
-        const progressPercent = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : lastProgress;
-        
-        if (iterations % 5 === 0 || progressPercent !== lastProgress) {
-          log.info(`Progress: ${progressPercent}% | Jobs: ${completedJobs}/${totalJobs} | Current: ${currentJob?.type || 'none'}`);
+        if (progress.error?.length) {
+          log.error(`Plan errors: ${progress.error.join(', ')}`);
         }
         
-        lastProgress = progressPercent;
+        if (progress.finished) {
+          done = true;
+          break;
+        }
+        
+        if (progress.info?.length && iterations % 5 === 0) {
+          log.info(`Info: ${progress.info.join(', ')}`);
+        }
+        
+        lastProgress = progress.started && !progress.finished ? lastProgress : 100;
         iterations++;
 
-        const jobName = currentJob?.type || jobManager;
-        updateProgress(progressBar, Math.min(progressPercent, 99), { job: jobName });
+        updateProgress(progressBar, Math.min(lastProgress, 99), { job: 'Running' });
 
-        if (totalJobs > 0 && completedJobs >= totalJobs) {
-          done = true;
-        } else if (jobThreads.length === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
       stopProgress(progressBar);
