@@ -2,6 +2,13 @@ name: "OWASP ZAP Scan Plan"
 
 env:
   target: "http://juice-shop:3000"
+  contexts:
+    - name: "mainContext"
+      urls:
+        - "${target}"
+      includePaths:
+        - "${target}.*"
+      excludePaths: []
 
 jobs:
   - type: "passiveScan-config"
@@ -10,17 +17,18 @@ jobs:
 
   - type: "spider"
     parameters:
-      url: "${env.target}"
-      maxDepth: 10
+      context: "mainContext"
+      url: "${target}"
 
   - type: "spiderAjax"
     parameters:
-      url: "${env.target}"
+      context: "mainContext"
+      url: "${target}"
       maxDuration: 5
 
   - type: "activeScan"
     parameters:
-      url: "${env.target}"
+      context: "mainContext"
 
   - type: "report"
     parameters:
