@@ -45,6 +45,21 @@ async function copyFileToContainer(containerId: string, hostFilePath: string): P
   return `${containerPath}/${filename}`;
 }
 
+async function createContainerDirectory(containerId: string, dirPath: string): Promise<void> {
+  const container = docker.getContainer(containerId);
+  
+  const mkdirExec = await container.exec({
+    Cmd: ['mkdir', '-p', dirPath],
+    AttachStdout: true,
+    AttachStderr: true,
+  });
+  const mkdirStream = await mkdirExec.start({ hijack: true, stdin: false });
+  await new Promise<void>((resolve) => {
+    mkdirStream.on('end', resolve);
+    mkdirStream.on('error', resolve);
+  });
+}
+
 async function downloadFromContainer(containerId: string, containerPath: string, outputDir: string): Promise<string[]> {
   const container = docker.getContainer(containerId);
   const downloadedFiles: string[] = [];
@@ -218,6 +233,12 @@ export const automateCommand: yargs.CommandModule = {
         const containerPath = await copyFileToContainer(resolvedContainerId!, planFile);
         log.info(`Copied plan to container: ${containerPath}`);
         planPath = containerPath;
+
+        const reportJob = (plan.jobs || []).find((j: any) => j.type === 'report');
+        const reportDir = reportJob?.parameters?.reportDir || 'zap-results';
+        const containerReportDir = `/home/zap/config/examples/${reportDir}`;
+        log.info(`Creating report directory in container: ${containerReportDir}`);
+        await createContainerDirectory(resolvedContainerId!, containerReportDir);
       } else {
         log.info('No container specified - using local file path');
       }
