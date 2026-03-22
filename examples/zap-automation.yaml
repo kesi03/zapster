@@ -37,3 +37,5 @@ jobs:
         - "json"
         - "html"
         - "xml"
+        - "md"
+      outputDir: "zap-results"

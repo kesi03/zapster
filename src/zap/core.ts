@@ -58,4 +58,14 @@ export class CoreAPI extends ZapBase {
   async getAllRuleConfigs(): Promise<any> {
     return this.request('/JSON/ruleConfig/view/allRuleConfigs');
   }
+
+  async getAllStats(): Promise<Record<string, number>> {
+    return this.request('/JSON/stats/view/allStatistics');
+  }
+
+  async getStats(site?: string): Promise<Record<string, number>> {
+    const params: Record<string, any> = {};
+    if (site) params.site = site;
+    return this.request('/JSON/stats/view/stats', params);
+  }
 }
