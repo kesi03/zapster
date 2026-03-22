@@ -60,11 +60,7 @@ export class CoreAPI extends ZapBase {
   }
 
   async getAllStats(): Promise<Record<string, number>> {
-    try {
-      return await this.request('/JSON/stats/view/allStatistics');
-    } catch {
-      return this.request('/JSON/stats/view/stats');
-    }
+    return this.request('/JSON/stats/view/stats');
   }
 
   async getStats(site?: string): Promise<Record<string, number>> {

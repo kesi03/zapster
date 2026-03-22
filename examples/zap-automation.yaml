@@ -35,7 +35,7 @@ jobs:
       title: "ZAP Security Scan Report"
       template: "traditional-html"
       reportDir: "zap-results"
-      reportFile: "{{TARGET_HOST}}-report-html-{{DATE}}"
+      reportFile: "zap-report"
       format: "html"
 
   - type: "report"
@@ -43,7 +43,7 @@ jobs:
       title: "ZAP Security Scan Report"
       template: "traditional-md"
       reportDir: "zap-results"
-      reportFile: "{{TARGET_HOST}}-report-md-{{DATE}}"
+      reportFile: "zap-report"
       format: "md"
 
   - type: "report"
@@ -51,7 +51,7 @@ jobs:
       title: "ZAP Security Scan Report"
       template: "traditional-xml"
       reportDir: "zap-results"
-      reportFile: "{{TARGET_HOST}}-report-xml-{{DATE}}"
+      reportFile: "zap-report"
       format: "xml"
 
   - type: "report"
@@ -59,7 +59,7 @@ jobs:
       title: "ZAP Security Scan Report"
       template: "traditional-json"
       reportDir: "zap-results"
-      reportFile: "{{TARGET_HOST}}-report-json-{{DATE}}"
+      reportFile: "zap-report"
       format: "json"
 
   - type: "report"
@@ -67,4 +67,4 @@ jobs:
       title: "ZAP Security Scan Report"
       template: "traditional-pdf"
       reportDir: "zap-results"
-      reportFile: "{{TARGET_HOST}}-report-pdf-{{DATE}}"
+      reportFile: "zap-report"

@@ -14,7 +14,7 @@ on:
       debug:
         description: 'Enable debug logging'
         required: false
-        default: 'true'
+        default: 'false'
 
 jobs:
   zap-automation:
@@ -25,7 +25,7 @@ jobs:
       ZAP_PORT: 8080
       ZAP_API_KEY: zapster-api-key
       PLAN_FILE: ${{ inputs.plan_file || 'examples/zap-automation.yaml' }}
-      DEBUG: ${{ inputs.debug || 'true' }}
+      DEBUG: ${{ inputs.debug || 'false' }}
       ZAPSTER_WORKSPACE: zap-results
     services:
       zap:

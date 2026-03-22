@@ -374,17 +374,6 @@ export const automateCommand: yargs.CommandModule = {
 
       if (resolvedContainerId) {
         const containerId = resolvedContainerId;
-        const logsDir = getWorkspacePath('logs');
-        const logsFile = path.join(logsDir, 'zap-container.log');
-        
-        try {
-          log.info('Fetching container logs...');
-          const logs = await getContainerLogs(containerId, 500);
-          fs.writeFileSync(logsFile, logs);
-          log.success(`Container logs saved to: ${logsFile}`);
-        } catch (error: any) {
-          log.warn(`Could not fetch container logs: ${error.message}`);
-        }
 
         const localDir = getWorkspacePath('reports');
         if (!fs.existsSync(localDir)) {
@@ -392,30 +381,20 @@ export const automateCommand: yargs.CommandModule = {
         }
         log.info(`Reports will be saved to: ${localDir}`);
 
-        if (reportPaths.length > 0) {
-          log.info(`Found ${reportPaths.length} report(s) to download`);
-          
-          for (const reportPath of reportPaths) {
-            await downloadSingleFile(containerId, reportPath, localDir);
-          }
-        } else {
-          log.warn('No report paths found in job output');
-        }
-
         const reportJob = (plan.jobs || []).find((j: any) => j.type === 'report');
         const reportDir = reportJob?.parameters?.reportDir || 'zap-results';
+
         const basePaths = [
           `/home/zap/config/examples/${reportDir}`,
-          `/zap/wrk/${reportDir}`,
-          `/home/zap/${reportDir}`,
-          `/zap/${reportDir}`,
           `/home/zap/config/examples`,
+          `/zap/wrk/${reportDir}`,
           `/zap/wrk`,
         ];
 
         log.info(`Searching for reports in container...`);
         const allDownloadedFiles: string[] = [];
         for (const containerPath of basePaths) {
+          log.info(`Checking: ${containerPath}`);
           const reports = await downloadFromContainer(containerId, containerPath, localDir);
           if (reports.length > 0) {
             allDownloadedFiles.push(...reports);
@@ -428,7 +407,6 @@ export const automateCommand: yargs.CommandModule = {
         } else {
           log.warn('No reports found in container');
         }
-        
       }
 
       log.success('Automation plan completed successfully!');
