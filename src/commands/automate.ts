@@ -102,8 +102,14 @@ export const automateCommand: yargs.CommandModule = {
       const version = await zap.core.getVersion();
       log.success(`Connected to ZAP version: ${version}`);
 
-      const progressBar = createProgressBar('Automation |{bar}| {percentage}% | Job: {job}');
-      updateProgress(progressBar, 0, { job: 'Starting...' });
+      const expectedJobs = (plan.jobs || []).map((job: any) => job.type);
+      log.info(`Expected jobs: ${expectedJobs.join(', ')}`);
+
+      const completedJobs = new Set<string>();
+      let currentJob = 'Initializing...';
+
+      const progressBar = createProgressBar('Automation |{bar}| {percentage}% | {job}');
+      updateProgress(progressBar, 0, { job: currentJob });
 
       let planPath = planFile;
       const containerArg = argv.container as string | undefined;
@@ -134,7 +140,6 @@ export const automateCommand: yargs.CommandModule = {
       log.info(`Plan started with ID: ${planId}`);
 
       let done = false;
-      let lastProgress = 0;
       let iterations = 0;
 
       while (!done) {
@@ -144,27 +149,49 @@ export const automateCommand: yargs.CommandModule = {
           log.error(`Plan errors: ${progress.error.join(', ')}`);
         }
         
+        if (progress.info) {
+          for (const msg of progress.info) {
+            const startedMatch = msg.match(/^Job (\S+) started$/);
+            if (startedMatch) {
+              currentJob = startedMatch[1];
+            }
+
+            for (const jobType of expectedJobs) {
+              if (msg.includes(`Job ${jobType} finished`)) {
+                completedJobs.add(jobType);
+              }
+            }
+          }
+        }
+        
         if (progress.finished) {
-          done = true;
+          console.log(JSON.stringify(progress, null, 2));
           break;
         }
         
-        if (progress.info?.length && iterations % 5 === 0) {
-          log.info(`Progress: ${JSON.stringify(progress, null, 2)}`);
+        if (iterations % 10 === 0 && progress.info?.length) {
           log.info(`Info: ${progress.info.join(', ')}`);
         }
         
-        lastProgress = progress.started && !progress.finished ? lastProgress : 100;
+        const percentage = expectedJobs.length > 0 
+          ? Math.round((completedJobs.size / expectedJobs.length) * 100) 
+          : 0;
         iterations++;
 
-        updateProgress(progressBar, Math.min(lastProgress, 99), { job: 'Running' });
+        updateProgress(progressBar, Math.min(percentage, 99), { job: currentJob });
 
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
+      for (const job of expectedJobs) {
+        if (!completedJobs.has(job)) {
+          log.warn(`Job not completed: ${job}`);
+        }
+      }
+
       stopProgress(progressBar);
       updateProgress(progressBar, 100, { job: 'Complete!' });
-
+      
       log.success('Automation plan completed successfully!');
 
     } catch (error: any) {
