@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@types/dockerode':
+        specifier: ^4.0.1
+        version: 4.0.1
       axios:
         specifier: ^1.6.0
         version: 1.13.6
@@ -42,9 +45,6 @@ importers:
       '@types/cli-progress':
         specifier: ^3.11.6
         version: 3.11.6
-      '@types/dockerode':
-        specifier: ^4.0.1
-        version: 4.0.1
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.37

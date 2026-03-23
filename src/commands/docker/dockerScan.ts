@@ -1,14 +1,11 @@
-import yargs from 'yargs';
-import Docker from 'dockerode';
+import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import { initLoggerWithWorkspace, getWorkspacePath } from '../../utils/workspace';
 import { log } from '../../utils/logger';
-
-const docker = new Docker();
 
 interface DockerScanOptions {
   target: string;
+  format?: string;
   configFile?: string;
   configUrl?: string;
   genFile?: string;
@@ -46,73 +43,69 @@ export async function runZapDockerScan(
   options: DockerScanOptions
 ): Promise<number> {
   const zapImage = options.image || 'ghcr.io/zaproxy/zaproxy:stable';
-  
+
   log.info(`Pulling ZAP Docker image: ${zapImage}`);
-  try {
-    await docker.pull(zapImage);
-    log.success('Image pulled successfully');
-  } catch (err: any) {
-    log.warn(`Could not pull image: ${err.message}, trying to use local image`);
-  }
+  await new Promise<void>((resolve) => {
+    const pull = spawn('docker', ['pull', zapImage]);
+    pull.on('close', () => resolve());
+  });
 
   const workspace = options.workspace || process.env.ZAPSTER_WORKSPACE || '.';
-  const hostWorkspace = path.isAbsolute(workspace) 
-    ? workspace 
+  const hostWorkspace = path.isAbsolute(workspace)
+    ? workspace
     : path.resolve(process.cwd(), workspace);
 
   if (!fs.existsSync(hostWorkspace)) {
     fs.mkdirSync(hostWorkspace, { recursive: true });
   }
 
-  const binds: string[] = [];
-  const volumes: Record<string, string> = {};
+  const dockerArgs: string[] = ['run', '--rm'];
 
-  const configFile = options.configFile;
-  const genFile = options.genFile;
-  const reportHtml = options.reportHtml;
-  const reportMd = options.reportMd;
-  const reportXml = options.reportXml;
-  const reportJson = options.reportJson;
-  const contextFile = options.contextFile;
-  const progressFile = options.progressFile;
-
-  if (configFile || genFile || reportHtml || reportMd || reportXml || reportJson || contextFile || progressFile) {
-    const wrkDir = '/zap/wrk';
-    binds.push(`${hostWorkspace}:${wrkDir}:rw`);
-    volumes[wrkDir] = hostWorkspace;
+  if (options.network && options.network !== 'host') {
+    dockerArgs.push('--network', options.network);
   }
+
+  if (options.port) {
+    dockerArgs.push('-p', `${options.port}:8080`);
+  }
+
+  if (options.debug) {
+    dockerArgs.push('-e', 'DEBUG=true');
+  }
+
+  dockerArgs.push('-v', `${hostWorkspace}:/zap/wrk:rw`);
+
+  dockerArgs.push('-w', '/zap/wrk');
+
+  dockerArgs.push(zapImage, 'python', `/docker/scripts/${scriptName}.py`, ...args);
 
   log.info(`Starting ZAP ${scriptName}...`);
   log.info(`Target: ${options.target}`);
-
-  const cmdArgs: string[] = ['python', '/docker/scripts/' + scriptName + '.py', ...args];
+  log.info(`Command: docker ${dockerArgs.join(' ')}`);
 
   return new Promise<number>((resolve) => {
-    docker.run(
-      zapImage,
-      cmdArgs,
-      process.stdout,
-      {
-        HostConfig: {
-          Binds: binds,
-          PortBindings: options.port ? {
-            '8080/tcp': [{ HostPort: String(options.port) }]
-          } : undefined,
-          AutoRemove: true,
-          NetworkMode: options.network || 'host',
-        },
-        Env: options.debug ? ['DEBUG=true'] : [],
-      },
-      (err: Error | null, data: any) => {
-        if (err) {
-          log.error(`Docker run error: ${err.message}`);
-          resolve(1);
-        } else {
-          resolve(data?.StatusCode ?? 0);
-        }
-      }
-    );
+    const proc = spawn('docker', dockerArgs, { stdio: 'inherit' });
+
+    const timeoutMs = (options.timeoutMins || 60) * 60 * 1000;
+    const timeout = setTimeout(() => {
+      log.warn('Timeout reached, stopping container...');
+      spawn('docker', ['stop', '-t', '5', '-s', 'SIGINT', $(proc.pid)]);
+    }, timeoutMs);
+
+    proc.on('close', (code) => {
+      clearTimeout(timeout);
+      resolve(code ?? 0);
+    });
+
+    proc.on('error', (err) => {
+      log.error(`Docker error: ${err.message}`);
+      resolve(1);
+    });
   });
+}
+
+function $(pid: number | undefined): string {
+  return pid?.toString() ?? '';
 }
 
 export function buildZapBaselineArgs(options: DockerScanOptions): string[] {
@@ -181,6 +174,7 @@ export function buildZapFullScanArgs(options: DockerScanOptions): string[] {
 export function buildZapApiScanArgs(options: DockerScanOptions): string[] {
   const args: string[] = ['zap-api-scan.py', '-t', options.target];
 
+  if (options.format) args.push('-f', options.format);
   if (options.configFile) args.push('-c', options.configFile);
   if (options.configUrl) args.push('-u', options.configUrl);
   if (options.genFile) args.push('-g', options.genFile);
@@ -203,8 +197,7 @@ export function buildZapApiScanArgs(options: DockerScanOptions): string[] {
   if (options.zapOptions) args.push('-z', options.zapOptions);
   if (options.hook) args.push('--hook', options.hook);
   if ((options as any).schema) args.push('--schema', (options as any).schema);
+  if ((options as any).hostOverride) args.push('-O', (options as any).hostOverride);
 
   return args;
 }
-
-export { docker };

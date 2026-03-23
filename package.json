@@ -48,6 +48,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/dockerode": "^4.0.1",
     "axios": "^1.6.0",
     "cli-progress": "^3.12.0",
     "dockerode": "^4.0.10",
@@ -61,7 +62,6 @@
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.6",
-    "@types/dockerode": "^4.0.1",
     "@types/node": "^20.10.0",
     "@types/tar-fs": "^2.0.4",
     "@types/yargs": "^17.0.32",
