@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawnSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { log } from '../../utils/logger';
@@ -41,14 +41,14 @@ interface DockerScanOptions {
 
 export async function runZapDockerScan(
   scriptName: string,
-  args: string[],
+  zapArgs: string[],
   options: DockerScanOptions
 ): Promise<number> {
   const zapImage = options.image || 'ghcr.io/zaproxy/zaproxy:stable';
 
   log.info(`Pulling ZAP Docker image: ${zapImage}`);
   await new Promise<void>((resolve) => {
-    const pull = spawn('docker', ['pull', zapImage]);
+    const pull = require('child_process').spawn('docker', ['pull', zapImage]);
     pull.on('close', () => resolve());
   });
 
@@ -61,71 +61,46 @@ export async function runZapDockerScan(
     fs.mkdirSync(hostWorkspace, { recursive: true });
   }
 
-  const dockerArgs: string[] = ['run', '--rm'];
+  const configPath = options.configPath
+    ? (path.isAbsolute(options.configPath) ? options.configPath : path.resolve(process.cwd(), options.configPath))
+    : null;
+
+  const apiFolder = options.apiFolder
+    ? (path.isAbsolute(options.apiFolder) ? options.apiFolder : path.resolve(process.cwd(), options.apiFolder))
+    : null;
+
+  const dockerFlags: string[] = ['run', '--rm'];
 
   if (options.network && options.network !== 'host') {
-    dockerArgs.push('--network', options.network);
+    dockerFlags.push('--network', options.network);
+  } else {
+    dockerFlags.push('--network', 'host');
   }
 
-  if (options.port) {
-    dockerArgs.push('-p', `${options.port}:8080`);
-  }
+  dockerFlags.push(
+    '-v', `${hostWorkspace}:/zap/wrk/:rw`,
+    '-v', `${configPath || hostWorkspace}:/zap/cfg/:rw`,
+    '-v', `${apiFolder || hostWorkspace}:/zap/specs/:ro`
+  );
 
   if (options.debug) {
-    dockerArgs.push('-e', 'DEBUG=true');
+    dockerFlags.push('-e', 'DEBUG=true');
   }
 
-  if (options.configPath) {
-    const hostConfigPath = path.isAbsolute(options.configPath)
-      ? options.configPath
-      : path.resolve(process.cwd(), options.configPath);
-    if (fs.existsSync(hostConfigPath)) {
-      dockerArgs.push('-v', `${hostConfigPath}:/zap/cfg:rw`);
-    }
-  }
+  dockerFlags.push(zapImage);
 
-  if (options.apiFolder) {
-    const hostApiFolder = path.isAbsolute(options.apiFolder)
-      ? options.apiFolder
-      : path.resolve(process.cwd(), options.apiFolder);
-    if (fs.existsSync(hostApiFolder)) {
-      dockerArgs.push('-v', `${hostApiFolder}:/zap/specs:ro`);
-    }
-  }
-
-  dockerArgs.push('-v', `${hostWorkspace}:/zap/wrk:rw`);
-
-  dockerArgs.push('-w', '/zap/wrk');
-
-  dockerArgs.push(zapImage,...args);
+  const finalArgs = [...dockerFlags, ...zapArgs];
 
   log.info(`Starting ZAP ${scriptName}...`);
   log.info(`Target: ${options.target}`);
-  log.info(`Command: docker ${dockerArgs.join(' ')}`);
+  log.info(`Command: docker ${finalArgs.join(' ')}`);
 
-  return new Promise<number>((resolve) => {
-    const proc = spawn('docker', dockerArgs, { stdio: 'inherit' });
-
-    const timeoutMs = (options.timeoutMins || 60) * 60 * 1000;
-    const timeout = setTimeout(() => {
-      log.warn('Timeout reached, stopping container...');
-      spawn('docker', ['stop', '-t', '5', '-s', 'SIGINT', $(proc.pid)]);
-    }, timeoutMs);
-
-    proc.on('close', (code) => {
-      clearTimeout(timeout);
-      resolve(code ?? 0);
-    });
-
-    proc.on('error', (err) => {
-      log.error(`Docker error: ${err.message}`);
-      resolve(1);
-    });
+  const result = spawnSync('docker', finalArgs, {
+    stdio: 'inherit',
+    shell: true
   });
-}
 
-function $(pid: number | undefined): string {
-  return pid?.toString() ?? '';
+  return result.status ?? 0;
 }
 
 export function buildZapBaselineArgs(options: DockerScanOptions): string[] {
