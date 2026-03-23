@@ -134,7 +134,6 @@ export const fullScanCommand: yargs.CommandModule = {
         description: 'Context file which will be loaded prior to scanning the target',
       })
       .option('progress-file', {
-        alias: 'p',
         type: 'string',
         description: 'Progress file which specifies issues that are being addressed',
       })

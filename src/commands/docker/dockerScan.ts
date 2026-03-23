@@ -131,7 +131,7 @@ export function buildZapBaselineArgs(options: DockerScanOptions): string[] {
   if (options.ajaxSpider) args.push('-j');
   if (options.minLevel) args.push('-l', options.minLevel);
   if (options.contextFile) args.push('-n', options.contextFile);
-  if (options.progressFile) args.push('--progress-file', options.progressFile);
+  if (options.progressFile) args.push('-p', options.progressFile);
   if (options.shortOutput) args.push('-s');
   if (options.timeoutMins) args.push('-T', String(options.timeoutMins));
   if (options.user) args.push('-U', options.user);
@@ -163,7 +163,7 @@ export function buildZapFullScanArgs(options: DockerScanOptions): string[] {
   if (options.ajaxSpider) args.push('-j');
   if (options.minLevel) args.push('-l', options.minLevel);
   if (options.contextFile) args.push('-n', options.contextFile);
-  if (options.progressFile) args.push('--progress-file', options.progressFile);
+  if (options.progressFile) args.push('-p', options.progressFile);
   if (options.shortOutput) args.push('-s');
   if (options.timeoutMins) args.push('-T', String(options.timeoutMins));
   if (options.user) args.push('-U', options.user);
