@@ -1,4 +1,5 @@
-name: create-docker-image-and-test
+name: zap-docker-image
+# This workflow builds a ZAP daemon Docker image with an auto-generated API key, pushes it to GHCR and Dockerhub, and triggers a test workflow to verify the image.
 
 on:
   workflow_dispatch:
@@ -10,101 +11,95 @@ jobs:
     permissions:
       contents: read
       packages: write
-      actions: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Extract version from tag
-        id: vars
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+    - name: Extract version from tag
+      id: vars
+      run: |
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-          else
+            else
             echo "VERSION=latest" >> $GITHUB_ENV
-          fi
+            fi
 
-      - name: Generate ZAP API Key
-        run: |
-          ZAP_API_KEY=$(openssl rand -hex 16)
-          echo "ZAP_API_KEY=$ZAP_API_KEY" >> $GITHUB_ENV
-          echo "ZAP API Key: $ZAP_API_KEY"
+    - name: Generate ZAP API Key
+      run: |
+        ZAP_API_KEY=$(openssl rand -hex 16)
+        echo "ZAP_API_KEY=$ZAP_API_KEY" >> $GITHUB_ENV
+        echo "🔑 ZAP API Key (for container use): $ZAP_API_KEY"
 
-      - name: Generate Dockerfile inline
-        run: |
-          VERSION=${VERSION:-stable}
-          MODE="daemon"
-          PORT=8080
+    - name: Generate Dockerfile inline
+      run: |
+        VERSION=${VERSION:-stable}
+        MODE="daemon"
+        PORT=8080
 
-          cat > Dockerfile << 'DOCKERFILE'
-          FROM ghcr.io/zaproxy/zaproxy:$VERSION
+        echo "FROM ghcr.io/zaproxy/zaproxy:$VERSION" > Dockerfile
+        echo "" >> Dockerfile
+        echo "ARG ZAP_API_KEY" >> Dockerfile
+        echo "LABEL description=\"ZAP daemon with auto-generated API key\"" >> Dockerfile
+        echo "LABEL zap.api.key=\"Auto-generated at build time. Displayed on container startup and accessible via \$ZAP_API_KEY\"" >> Dockerfile
+        echo "ENV ZAP_API_KEY=\$ZAP_API_KEY" >> Dockerfile
+        echo "ENTRYPOINT [\"sh\", \"-c\", \"echo 🔑 ZAP API Key: \$ZAP_API_KEY && \\" >> Dockerfile
+        echo "  zap.sh -$MODE -host 0.0.0.0 -port $PORT \\" >> Dockerfile
+        echo "  -config api.key=\$ZAP_API_KEY \\" >> Dockerfile
+        echo "  -config api.addrs.addr.name=.* \\" >> Dockerfile
+        echo "  -config api.addrs.addr.regex=true\"]" >> Dockerfile
 
-          ARG ZAP_API_KEY
-          LABEL description="ZAP daemon with auto-generated API key"
-          LABEL zap.api.key="Auto-generated at build time"
+        echo "✅ Dockerfile generated with embedded API key + startup logging"
 
-          ENV ZAP_API_KEY=$ZAP_API_KEY
-          ENTRYPOINT ["sh", "-c", "echo ZAP API Key: $ZAP_API_KEY && zap.sh -$MODE -host 0.0.0.0 -port $PORT -config api.key=$ZAP_API_KEY -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true"]
-          DOCKERFILE
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-          echo "Dockerfile generated"
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Log in to Dockerhub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USER }}
+        password: ${{ secrets.DOCKER_PAT }}
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and push image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        build-args: |
+          ZAP_API_KEY=${{ env.ZAP_API_KEY }}
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/zapr:latest
+          ghcr.io/${{ github.repository_owner }}/zapr:${{ env.VERSION }}
+          mockholm/zapr:latest
+          mockholm/zapr:${{ env.VERSION }}
 
-      - name: Log in to Dockerhub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PAT }}
+    - name: Create GitHub Secret
+      uses: gliech/create-github-secret-action@v1
+      with:
+            location: ${{ github.repository }}
+            name: ZAP_API_KEY
+            value: ${{ env.ZAP_API_KEY }}
+            pa_token: ${{ secrets.GH_PAT }}
+            org_visibility: private
 
-      - name: Build and push image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          build-args: |
-            ZAP_API_KEY=${{ env.ZAP_API_KEY }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/zapr:latest
-            ghcr.io/${{ github.repository_owner }}/zapr:${{ env.VERSION }}
-            mockholm/zapr:latest
-            mockholm/zapr:${{ env.VERSION }}
-
-      - name: Create GitHub Secret
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_PAT }}
-          script: |
-            const [owner, repo] = '${{ github.repository }}'.split('/');
-            await github.rest.actions.createOrUpdateRepoSecret({
-              owner: owner,
-              repo: repo,
-              secret_name: 'ZAP_API_KEY',
-              encrypted_value: null,
-              value: process.env.ZAP_API_KEY
-            });
-
-      - name: Trigger ZAP Version Test Workflow
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_PAT }}
-          script: |
-            const [owner, repo] = '${{ github.repository }}'.split('/');
-            await github.rest.actions.createWorkflowDispatch({
-              owner: owner,
-              repo: repo,
-              workflow_id: "zap-test-ghcr.yml",
-              ref: context.ref,
-              inputs: {
-                apiKey: process.env.ZAP_API_KEY
-              }
-            });
+    - name: Trigger ZAP Version Test Workflow
+      uses: actions/github-script@v7
+      with:
+            github-token: ${{ secrets.GH_PAT }}
+            script: |
+                await github.rest.actions.createWorkflowDispatch({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    workflow_id: "zap-test-ghcr.yml", // can also use the workflow's ID or filename
+                    ref: context.ref,
+                    inputs: {
+                    apiKey: process.env.ZAP_API_KEY
+                    }
+                })

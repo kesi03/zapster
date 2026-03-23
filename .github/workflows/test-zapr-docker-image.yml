@@ -14,7 +14,7 @@ jobs:
       ZAP_API_KEY: ${{ github.event.inputs.apiKey != '' && github.event.inputs.apiKey || secrets.ZAP_API_KEY }}
     services:
       zap:
-        image: ghcr.io/kesi03/zap-daemon:latest
+        image: ghcr.io/kesi03/zapr:latest
         ports:
           - 8080:8080
         options: >-
@@ -60,7 +60,7 @@ jobs:
       ZAP_API_KEY: ${{ github.event.inputs.apiKey != '' && github.event.inputs.apiKey || secrets.ZAP_API_KEY }}
     services:
       zap:
-        image: mockholm/zap-daemon:latest
+        image: mockholm/zapr:latest
         ports:
           - 8080:8080
         options: >-
