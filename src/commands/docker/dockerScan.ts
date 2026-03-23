@@ -7,6 +7,8 @@ interface DockerScanOptions {
   target: string;
   format?: string;
   configFile?: string;
+  configPath?: string;
+  apiFolder?: string;
   configUrl?: string;
   genFile?: string;
   spiderMins?: number;
@@ -71,6 +73,24 @@ export async function runZapDockerScan(
 
   if (options.debug) {
     dockerArgs.push('-e', 'DEBUG=true');
+  }
+
+  if (options.configPath) {
+    const hostConfigPath = path.isAbsolute(options.configPath)
+      ? options.configPath
+      : path.resolve(process.cwd(), options.configPath);
+    if (fs.existsSync(hostConfigPath)) {
+      dockerArgs.push('-v', `${hostConfigPath}:/zap/cfg:rw`);
+    }
+  }
+
+  if (options.apiFolder) {
+    const hostApiFolder = path.isAbsolute(options.apiFolder)
+      ? options.apiFolder
+      : path.resolve(process.cwd(), options.apiFolder);
+    if (fs.existsSync(hostApiFolder)) {
+      dockerArgs.push('-v', `${hostApiFolder}:/zap/specs:ro`);
+    }
   }
 
   dockerArgs.push('-v', `${hostWorkspace}:/zap/wrk:rw`);

@@ -6,6 +6,8 @@ interface ApiScanArgs {
   target: string;
   format: string;
   configFile?: string;
+  configPath?: string;
+  apiFolder?: string;
   configUrl?: string;
   genFile?: string;
   reportHtml?: string;
@@ -191,6 +193,14 @@ export const apiScanCommand: yargs.CommandModule = {
         alias: 'n',
         type: 'string',
         description: 'Docker network mode or name (e.g., host, bridge, or custom network)',
+      })
+      .option('config-path', {
+        type: 'string',
+        description: 'Local path to mount as /zap/cfg in the container (for config files)',
+      })
+      .option('api-folder', {
+        type: 'string',
+        description: 'Local path to mount as /zap/specs in the container (for API specs)',
       });
   },
   handler: async (argv) => {

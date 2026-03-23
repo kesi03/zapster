@@ -41,6 +41,9 @@ jobs:
       - name: Create workspace directory
         run: mkdir -p $ZAPSTER_WORKSPACE
 
+      - name: Create config directory
+        run: mkdir -p config
+
       - name: Create Docker network
         run: docker network create $DOCKER_NETWORK
 
@@ -78,6 +81,8 @@ jobs:
             --report-json report.json \
             --report-xml report.xml \
             --workspace $ZAPSTER_WORKSPACE \
+            --api-folder examples \
+            --config-path config \
             --network $DOCKER_NETWORK \
             $DEBUG_FLAG
 
