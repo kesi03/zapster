@@ -66,7 +66,7 @@ jobs:
             SPIDER_ARG="--spider-mins $SPIDER_MINS"
           fi
           
-          pnpm run full-scan --target $TARGET_URL \
+          pnpm run docker-full-scan --target $TARGET_URL \
             --report-html report.html \
             --report-json report.json \
             --workspace $ZAPSTER_WORKSPACE \

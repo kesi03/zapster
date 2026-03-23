@@ -25,7 +25,7 @@ import { httpSessionsCommand } from './commands/httpSessions';
 import { breakCommand } from './commands/break';
 import { proxyCommand } from './commands/proxy';
 import { automateCommand } from './commands/automate';
-import { baselineScanCommand, fullScanCommand, apiScanCommand, pullImageCommand } from './commands/docker';
+import { baselineScanCommand, fullScanCommand, apiScanCommand, pullImageCommand, dockerCommand } from './commands/docker';
 import { setDebug } from './utils/logger';
 
 const debugEnabled = process.env.DEBUG === 'true';
@@ -61,10 +61,7 @@ yargs(hideBin(process.argv))
   .command(breakCommand)
   .command(proxyCommand)
   .command(automateCommand)
-  .command(baselineScanCommand)
-  .command(fullScanCommand)
-  .command(apiScanCommand)
-  .command(pullImageCommand)
+  .command(dockerCommand)
   .option('host', {
     alias: 'H',
     type: 'string',

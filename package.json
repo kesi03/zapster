@@ -33,10 +33,10 @@
     "createExcelReport": "ts-node src/index.ts createExcelReport",
     "configureRules": "ts-node src/index.ts configureRules",
     "automate": "ts-node src/index.ts automate",
-    "baseline-scan": "ts-node src/index.ts baseline-scan",
-    "full-scan": "ts-node src/index.ts full-scan",
-    "api-scan": "ts-node src/index.ts api-scan",
-    "docker-pull": "ts-node src/index.ts docker-pull"
+    "docker-baseline-scan": "ts-node src/index.ts docker baseline-scan",
+    "docker-full-scan": "ts-node src/index.ts docker full-scan",
+    "docker-api-scan": "ts-node src/index.ts docker api-scan",
+    "docker-pull": "ts-node src/index.ts docker pull"
   },
   "keywords": [
     "zap",

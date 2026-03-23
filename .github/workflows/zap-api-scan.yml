@@ -67,7 +67,7 @@ jobs:
 
       - name: Run ZAP API Scan against VAmPI
         run: |
-          pnpm run api-scan \
+          pnpm run docker-api-scan \
             --target https://raw.githubusercontent.com/erev0s/VAmPI/master/openapi_specs/openapi3.yml \
             --format openapi \
             --report-html report.html \
