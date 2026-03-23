@@ -53,13 +53,25 @@ jobs:
 
       - name: Run ZAP Baseline Scan
         run: |
+          DEBUG_FLAG=""
+          CONFIG_FLAG=""
+          ALPHA_FLAG=""
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            DEBUG_FLAG="--debug"
+          fi
+          if [ -n "${{ inputs.config_url }}" ]; then
+            CONFIG_FLAG="--config-url ${{ inputs.config_url }}"
+          fi
+          if [ "${{ inputs.include_alpha }}" == "true" ]; then
+            ALPHA_FLAG="--include-alpha"
+          fi
           pnpm run docker-baseline-scan --target $TARGET_URL \
             --report-html report.html \
             --report-json report.json \
             --workspace $ZAPSTER_WORKSPACE \
-            ${{ inputs.config_url && format('--config-url {0}', inputs.config_url) }} \
-            ${{ inputs.include_alpha == 'true' && '--include-alpha' }} \
-            ${{ inputs.debug == 'true' && '--debug' }}
+            $CONFIG_FLAG \
+            $ALPHA_FLAG \
+            $DEBUG_FLAG
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4

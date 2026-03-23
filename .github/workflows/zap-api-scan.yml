@@ -67,6 +67,10 @@ jobs:
 
       - name: Run ZAP API Scan against VAmPI
         run: |
+          DEBUG_FLAG=""
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            DEBUG_FLAG="--debug"
+          fi
           pnpm run docker-api-scan \
             --target https://raw.githubusercontent.com/erev0s/VAmPI/master/openapi_specs/openapi3.yml \
             --format openapi \
@@ -75,7 +79,7 @@ jobs:
             --report-xml report.xml \
             --workspace $ZAPSTER_WORKSPACE \
             --network $DOCKER_NETWORK \
-            ${{ inputs.debug == 'true' && '--debug' }}
+            $DEBUG_FLAG
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4
