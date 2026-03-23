@@ -85,54 +85,33 @@ export async function runZapDockerScan(
   log.info(`Starting ZAP ${scriptName}...`);
   log.info(`Target: ${options.target}`);
 
-  const container = await docker.createContainer({
-    Image: zapImage,
-    Cmd: ['python', '-v'].concat(args),
-    HostConfig: {
-      Binds: binds,
-      PortBindings: options.port ? {
-        '8080/tcp': [{ HostPort: String(options.port) }]
-      } : undefined,
-      AutoRemove: true,
-      NetworkMode: options.network || 'host',
-    },
-    Env: options.debug ? ['DEBUG=true'] : [],
-  });
+  const cmdArgs: string[] = ['python', '/docker/scripts/' + scriptName + '.py', ...args];
 
-  await container.start();
-
-  const logStream = await container.logs({
-    follow: true,
-    stdout: true,
-    stderr: true,
-    tail: 0,
-  });
-
-  return new Promise((resolve) => {
-    let output = '';
-    let exitCode = 3;
-
-    logStream.on('data', (chunk: Buffer) => {
-      output += chunk.toString();
-      process.stdout.write(chunk);
-    });
-
-    logStream.on('end', async () => {
-      try {
-        const info = await container.inspect();
-        exitCode = info.State.ExitCode;
-      } catch (e) {
-        // Container already removed
+  return new Promise<number>((resolve) => {
+    docker.run(
+      zapImage,
+      cmdArgs,
+      process.stdout,
+      {
+        HostConfig: {
+          Binds: binds,
+          PortBindings: options.port ? {
+            '8080/tcp': [{ HostPort: String(options.port) }]
+          } : undefined,
+          AutoRemove: true,
+          NetworkMode: options.network || 'host',
+        },
+        Env: options.debug ? ['DEBUG=true'] : [],
+      },
+      (err: Error | null, data: any) => {
+        if (err) {
+          log.error(`Docker run error: ${err.message}`);
+          resolve(1);
+        } else {
+          resolve(data?.StatusCode ?? 0);
+        }
       }
-      resolve(exitCode);
-    });
-
-    setTimeout(async () => {
-      log.warn('Timeout reached, stopping container...');
-      try {
-        await container.stop();
-      } catch (e) {}
-    }, (options.timeoutMins || 60) * 60 * 1000);
+    );
   });
 }
 
