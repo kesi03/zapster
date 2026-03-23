@@ -463,12 +463,12 @@ Examples:
 - **Passed**: Low and Informational risk alerts
 - **Failed**: High and Medium risk alerts
 
-#### `createExcelReport` - Excel Report
+#### `utils create-excel-report` - Excel Report
 
 Generate an Excel spreadsheet report from ZAP alerts. Reports include test result summaries with pass/fail breakdowns.
 
 ```bash
-zapster createExcelReport [options]
+zapster utils create-excel-report [options]
 
 Options:
   --workspace, -w        Output directory (default: ZAPSTER_WORKSPACE env)
@@ -477,9 +477,9 @@ Options:
   --input, -i            Input JSON file path (alternative to fetching from ZAP)
 
 Examples:
-  zapster createExcelReport --workspace ./results
-  zapster createExcelReport --workspace ./results --name security-report.xlsx
-  zapster createExcelReport --input ./alerts.json --workspace ./results --name report.xlsx
+  zapster utils create-excel-report --workspace ./results
+  zapster utils create-excel-report --workspace ./results --name security-report.xlsx
+  zapster utils create-excel-report --input ./alerts.json --workspace ./results --name report.xlsx
 ```
 
 **Excel Sheets:**
@@ -903,7 +903,7 @@ jobs:
           npm run zap:get-report -- --format json --workspace zap-results --name report.json
           npm run zap:get-report -- --format html --workspace zap-results --name report.html
           npm run utils:get-pdf -- --workspace zap-results --name report.pdf
-          npm run createExcelReport -- --workspace zap-results --name zap-report.xlsx
+          npm run utils:create-excel-report -- --workspace zap-results --name zap-report.xlsx
           npm run utils:create-junit-results -- --workspace zap-results --name junit-results.xml
 
       - name: Get Docker Logs

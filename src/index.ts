@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { createExcelReportCommand } from './commands/createExcelReport';
 import { getLogsCommand } from './commands/getLogs';
 import { zapCommand } from './commands/zap';
 import { dockerCommand } from './commands/docker';
@@ -22,7 +21,6 @@ yargs(hideBin(process.argv))
   .command(dockerCommand)
   .command(azdoCommand)
   .command(utilsCommand)
-  .command(createExcelReportCommand)
   .command(getLogsCommand)
   .option('host', {
     alias: 'H',

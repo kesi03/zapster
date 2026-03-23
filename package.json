@@ -39,7 +39,7 @@
     "utils:create-junit-results": "ts-node src/index.ts utils create-junit-results",
     "azdo:create-test-result": "ts-node src/index.ts azdo create-test-result",
     "azdo:create-work-item": "ts-node src/index.ts azdo create-work-item",
-    "createExcelReport": "ts-node src/index.ts createExcelReport",
+    "utils:create-excel-report": "ts-node src/index.ts utils create-excel-report",
     "docker:baseline-scan": "ts-node src/index.ts docker baseline-scan",
     "docker:full-scan": "ts-node src/index.ts docker full-scan",
     "docker:api-scan": "ts-node src/index.ts docker api-scan",

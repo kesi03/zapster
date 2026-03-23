@@ -1,12 +1,12 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
-import { ZapClient } from '../zap/ZapClient';
-import { initLoggerWithWorkspace, getWorkspacePath } from '../utils/workspace';
-import { log } from '../utils/logger';
-import { createExcelFromAlerts, createExcelFromJson } from '../utils/excel';
+import { ZapClient } from '../../zap/ZapClient';
+import { initLoggerWithWorkspace, getWorkspacePath } from '../../utils/workspace';
+import { log } from '../../utils/logger';
+import { createExcelFromAlerts, createExcelFromJson } from '../../utils/excel';
 
 export const createExcelReportCommand: yargs.CommandModule = {
-  command: 'createExcelReport',
+  command: 'create-excel-report',
   describe: 'Create an Excel report from ZAP alerts',
   builder: (yargs) => {
     return yargs
