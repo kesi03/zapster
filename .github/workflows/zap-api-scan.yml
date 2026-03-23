@@ -75,7 +75,7 @@ jobs:
             DEBUG_FLAG="--debug"
           fi
           pnpm run docker-api-scan \
-            --target https://raw.githubusercontent.com/erev0s/VAmPI/master/openapi_specs/openapi3.yml \
+            --target VAmPI-openapi.yml \
             --format openapi \
             --report-html report.html \
             --report-json report.json \
