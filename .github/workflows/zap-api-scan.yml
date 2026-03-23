@@ -16,12 +16,7 @@ jobs:
       VAMPI_URL: http://vampi:5000
       DEBUG: ${{ inputs.debug }}
       ZAPSTER_WORKSPACE: zap-api-scan-results
-    services:
-      vampi:
-        image: erev0s/vampi:latest
-        ports:
-          - 5000:5000
-        options: --shm-size=512m
+      DOCKER_NETWORK: zap-network
 
     steps:
       - name: Checkout code
@@ -46,13 +41,21 @@ jobs:
       - name: Create workspace directory
         run: mkdir -p $ZAPSTER_WORKSPACE
 
-      - name: Wait for VAmPI to be ready
+      - name: Create Docker network
+        run: docker network create $DOCKER_NETWORK
+
+      - name: Pull ZAP Docker image
+        run: pnpm run docker-pull --image ghcr.io/zaproxy/zaproxy:stable
+
+      - name: Start VAmPI container
         run: |
+          docker run -d --name vampi --network $DOCKER_NETWORK -p 5000:5000 erev0s/vampi:latest
+          
           echo "Waiting for VAmPI to be ready..."
           timeout=120
           counter=0
           while [ $counter -lt $timeout ]; do
-            if curl -s http://vampi:5000/createdb > /dev/null 2>&1; then
+            if curl -s http://localhost:5000/createdb > /dev/null 2>&1; then
               echo "VAmPI is ready!"
               exit 0
             fi
@@ -71,6 +74,7 @@ jobs:
             --report-json report.json \
             --report-xml report.xml \
             --workspace $ZAPSTER_WORKSPACE \
+            --network $DOCKER_NETWORK \
             ${{ inputs.debug == 'true' && '--debug' }}
 
       - name: Upload Reports
@@ -109,3 +113,10 @@ jobs:
           echo "- JSON Report: \`$ZAPSTER_WORKSPACE/report.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- HTML Report: \`$ZAPSTER_WORKSPACE/report.html\`" >> $GITHUB_STEP_SUMMARY
           echo "- XML Report: \`$ZAPSTER_WORKSPACE/report.xml\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup Docker resources
+        if: always()
+        run: |
+          docker stop vampi 2>/dev/null || true
+          docker rm vampi 2>/dev/null || true
+          docker network rm $DOCKER_NETWORK 2>/dev/null || true

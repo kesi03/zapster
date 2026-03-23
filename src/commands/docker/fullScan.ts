@@ -177,8 +177,7 @@ export const fullScanCommand: yargs.CommandModule = {
       .option('network', {
         alias: 'n',
         type: 'string',
-        default: 'host',
-        description: 'Docker network mode (host, bridge, or network name)',
+        description: 'Docker network mode or name (e.g., host, bridge, or custom network)',
       });
   },
   handler: async (argv) => {
