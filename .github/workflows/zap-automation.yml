@@ -109,7 +109,7 @@ jobs:
           if [ "${{ inputs.debug }}" = "true" ]; then
             DEBUG_FLAG="--debug"
           fi
-          pnpm zap automate --file ${{ env.PLAN_FILE }} --image mockholm/zap-daemon --workspace $ZAPSTER_WORKSPACE $DEBUG_FLAG
+          pnpm run zap:automate --file ${{ env.PLAN_FILE }} --image mockholm/zap-daemon --workspace $ZAPSTER_WORKSPACE $DEBUG_FLAG
 
       - name: Generate JUnit Results
         run: pnpm run utils:create-junit-results --workspace zap-results --name junit-results.xml --title "ZAP Security Scan"
