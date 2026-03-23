@@ -75,7 +75,6 @@ export const apiScanCommand: yargs.CommandModule = {
         description: 'File to write the full ZAP HTML report',
       })
       .option('report-md', {
-        alias: 'w',
         type: 'string',
         description: 'File to write the full ZAP Wiki (Markdown) report',
       })
@@ -129,12 +128,10 @@ export const apiScanCommand: yargs.CommandModule = {
         description: 'Minimum level to show: PASS, IGNORE, INFO, WARN or FAIL',
       })
       .option('context-file', {
-        alias: 'n',
         type: 'string',
         description: 'Context file which will be loaded prior to scanning the target',
       })
       .option('progress-file', {
-        alias: 'p',
         type: 'string',
         description: 'Progress file which specifies issues that are being addressed',
       })

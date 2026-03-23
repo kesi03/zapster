@@ -87,6 +87,10 @@ export async function runZapDockerScan(
     dockerFlags.push('-e', 'DEBUG=true');
   }
 
+  if (options.port) {
+    dockerFlags.push('-p', `${options.port}:8080`);
+  }
+
   dockerFlags.push(zapImage);
 
   const finalArgs = [...dockerFlags, ...zapArgs];
@@ -116,14 +120,13 @@ export function buildZapBaselineArgs(options: DockerScanOptions): string[] {
   if (options.reportJson) args.push('-J', options.reportJson);
   if (options.includeAlpha) args.push('-a');
   if (options.debug) args.push('-d');
-  if (options.port) args.push('-P', String(options.port));
   if (options.delaySecs) args.push('-D', String(options.delaySecs));
   if (options.defaultRulesInfo) args.push('-i');
   if (options.ignoreWarning) args.push('-I');
   if (options.ajaxSpider) args.push('-j');
   if (options.minLevel) args.push('-l', options.minLevel);
   if (options.contextFile) args.push('-n', options.contextFile);
-  if (options.progressFile) args.push('-p', options.progressFile);
+  if (options.progressFile) args.push('--progress-file', options.progressFile);
   if (options.shortOutput) args.push('-s');
   if (options.timeoutMins) args.push('-T', String(options.timeoutMins));
   if (options.user) args.push('-U', options.user);
@@ -149,14 +152,13 @@ export function buildZapFullScanArgs(options: DockerScanOptions): string[] {
   if (options.reportJson) args.push('-J', options.reportJson);
   if (options.includeAlpha) args.push('-a');
   if (options.debug) args.push('-d');
-  if (options.port) args.push('-P', String(options.port));
   if (options.delaySecs) args.push('-D', String(options.delaySecs));
   if (options.defaultRulesInfo) args.push('-i');
   if (options.ignoreWarning) args.push('-I');
   if (options.ajaxSpider) args.push('-j');
   if (options.minLevel) args.push('-l', options.minLevel);
   if (options.contextFile) args.push('-n', options.contextFile);
-  if (options.progressFile) args.push('-p', options.progressFile);
+  if (options.progressFile) args.push('--progress-file', options.progressFile);
   if (options.shortOutput) args.push('-s');
   if (options.timeoutMins) args.push('-T', String(options.timeoutMins));
   if (options.user) args.push('-U', options.user);
@@ -179,13 +181,12 @@ export function buildZapApiScanArgs(options: DockerScanOptions): string[] {
   if (options.reportJson) args.push('-J', options.reportJson);
   if (options.includeAlpha) args.push('-a');
   if (options.debug) args.push('-d');
-  if (options.port) args.push('-P', String(options.port));
   if (options.delaySecs) args.push('-D', String(options.delaySecs));
   if (options.defaultRulesInfo) args.push('-i');
   if (options.ignoreWarning) args.push('-I');
   if (options.minLevel) args.push('-l', options.minLevel);
   if (options.contextFile) args.push('-n', options.contextFile);
-  if (options.progressFile) args.push('-p', options.progressFile);
+  if (options.progressFile) args.push('--progress-file', options.progressFile);
   if (options.shortOutput) args.push('-s');
   if (options.timeoutMins) args.push('-T', String(options.timeoutMins));
   if (options.user) args.push('-U', options.user);
