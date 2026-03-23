@@ -52,13 +52,13 @@ jobs:
 
       - name: Start VAmPI container
         run: |
-          docker run -d --name vampi --network $DOCKER_NETWORK -p 5000:5000 erev0s/vampi:latest
+          docker run -d --name vampi --network $DOCKER_NETWORK erev0s/vampi:latest
           
           echo "Waiting for VAmPI to be ready..."
           timeout=120
           counter=0
           while [ $counter -lt $timeout ]; do
-            if curl -s http://localhost:5000/createdb > /dev/null 2>&1; then
+            if curl -s --max-time 5 http://vampi:5000/createdb > /dev/null 2>&1; then
               echo "VAmPI is ready!"
               exit 0
             fi
@@ -77,7 +77,7 @@ jobs:
           pnpm run docker-api-scan \
             --target /zap/specs/VAmPI-openapi.yml \
             --format openapi \
-            --host-override http://0.0.0.0:5000 \
+            --host-override http://vampi:5000 \
             --report-html report.html \
             --report-json report.json \
             --report-xml report.xml \
