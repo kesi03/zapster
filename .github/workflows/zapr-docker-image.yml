@@ -1,4 +1,4 @@
-name: Create Zapr Daemon Image and Trigger Tests
+name: create-docker-image-and-test
 
 on:
   workflow_dispatch:
