@@ -84,10 +84,12 @@ jobs:
     - name: Create GitHub Secret
       uses: actions/github-script@v7
       with:
+        github-token: ${{ secrets.GH_PAT }}
         script: |
-          await github.rest.actions.createOrUpdateEnvironmentSecret({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
+          const [owner, repo] = '${{ github.repository }}'.split('/');
+          await github.rest.actions.createOrUpdateRepoSecret({
+            owner: owner,
+            repo: repo,
             secret_name: 'ZAP_API_KEY',
             value: process.env.ZAP_API_KEY
           });
@@ -95,14 +97,15 @@ jobs:
     - name: Trigger ZAP Version Test Workflow
       uses: actions/github-script@v7
       with:
-            github-token: ${{ secrets.GH_PAT }}
-            script: |
-                await github.rest.actions.createWorkflowDispatch({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    workflow_id: "zap-test-ghcr.yml", // can also use the workflow's ID or filename
-                    ref: context.ref,
-                    inputs: {
-                    apiKey: process.env.ZAP_API_KEY
-                    }
-                })
+        github-token: ${{ secrets.GH_PAT }}
+        script: |
+          const [owner, repo] = '${{ github.repository }}'.split('/');
+          await github.rest.actions.createWorkflowDispatch({
+            owner: owner,
+            repo: repo,
+            workflow_id: "zap-test-ghcr.yml",
+            ref: context.ref,
+            inputs: {
+              apiKey: process.env.ZAP_API_KEY
+            }
+          });
