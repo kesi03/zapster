@@ -57,7 +57,9 @@ jobs:
         run: pnpm run build
 
       - name: Create workspace directory
-        run: mkdir -p $ZAPSTER_WORKSPACE
+        run: |
+          mkdir -p $ZAPSTER_WORKSPACE
+          chmod -R 777 $ZAPSTER_WORKSPACE
 
       - name: Run ZAP Full Scan
         run: |
