@@ -1,21 +1,3 @@
-name: publish to npm
-
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to publish (e.g., 1.0.0, patch, minor, major)'
-        required: true
-        default: 'patch'
-
-jobs:
-  publish:
-    name: Publish to npm
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -27,16 +9,26 @@ jobs:
           corepack enable
           corepack prepare pnpm@9.0.0 --activate
 
+      # MOVE GIT CONFIG HERE
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build project
         run: pnpm run build
 
+      - name: Run tests
+        run: pnpm test
+
       - name: Version bump
         id: version
         run: |
           if [[ "${{ inputs.version }}" == "patch" ]] || [[ "${{ inputs.version }}" == "minor" ]] || [[ "${{ inputs.version }}" == "major" ]]; then
+            # This now succeeds because Git is configured
             pnpm version ${{ inputs.version }}
           else
             pnpm version ${{ inputs.version }} --no-git-tag-version
@@ -48,9 +40,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create Git Tag
+      - name: Push Git Tag
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git tag v${{ steps.version.outputs.version }}
+          # The tag was already created by 'pnpm version' above, we just push it
           git push origin v${{ steps.version.outputs.version }}
