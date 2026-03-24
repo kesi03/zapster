@@ -66,7 +66,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/zap-daemon:latest
-            ghcr.io/${{ github.repository_owner }}/zap-daemon:${{ env.VERSION }}
             mockholm/zap-daemon:latest
             mockholm/zap-daemon:${{ env.VERSION }}
