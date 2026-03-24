@@ -1,3 +1,21 @@
+name: publish to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0, patch, minor, major)'
+        required: true
+        default: 'patch'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -9,7 +27,6 @@
           corepack enable
           corepack prepare pnpm@9.0.0 --activate
 
-      # MOVE GIT CONFIG HERE
       - name: Configure Git
         run: |
           git config user.name "${{ github.actor }}"
@@ -28,7 +45,7 @@
         id: version
         run: |
           if [[ "${{ inputs.version }}" == "patch" ]] || [[ "${{ inputs.version }}" == "minor" ]] || [[ "${{ inputs.version }}" == "major" ]]; then
-            # This now succeeds because Git is configured
+            # pnpm version will automatically commit and tag because Git is now configured
             pnpm version ${{ inputs.version }}
           else
             pnpm version ${{ inputs.version }} --no-git-tag-version
@@ -40,7 +57,7 @@
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Push Git Tag
+      - name: Push Changes and Tag
         run: |
-          # The tag was already created by 'pnpm version' above, we just push it
-          git push origin v${{ steps.version.outputs.version }}
+          # Push the version commit and the tag created by 'pnpm version'
+          git push origin main --follow-tags
