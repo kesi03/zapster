@@ -41,13 +41,19 @@ jobs:
       - name: Version bump
         id: version
         run: |
+          # 1. Perform the version bump
           if [[ "${{ inputs.version }}" == "patch" ]] || [[ "${{ inputs.version }}" == "minor" ]] || [[ "${{ inputs.version }}" == "major" ]]; then
-            # pnpm version will automatically commit and tag because Git is now configured
             pnpm version ${{ inputs.version }}
           else
             pnpm version ${{ inputs.version }} --no-git-tag-version
           fi
-          echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+          # 2. Extract version into a local variable first to avoid syntax errors
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          
+          # 3. Output to GitHub Actions
+          echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+
 
       - name: Publish to npm
         run: pnpm publish --access public --no-git-checks
