@@ -20,28 +20,34 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Enable pnpm via Corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build project
-        run: npm run build
+        run: pnpm run build
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
 
       - name: Version bump
         id: version
         run: |
           if [[ "${{ inputs.version }}" == "patch" ]] || [[ "${{ inputs.version }}" == "minor" ]] || [[ "${{ inputs.version }}" == "major" ]]; then
-            npm version ${{ inputs.version }}
+            pnpm version ${{ inputs.version }}
           else
-            npm version ${{ inputs.version }} --no-git-tag-version
+            pnpm version ${{ inputs.version }} --no-git-tag-version
           fi
           echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: pnpm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
