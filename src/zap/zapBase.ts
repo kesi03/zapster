@@ -5,9 +5,13 @@ import { logger } from '../utils/logger';
 export class ZapBase {
   protected client: AxiosInstance;
   protected apiKey: string | null;
+  protected host: string;
+  protected port: number;
 
   constructor(config: ZapConfig) {
     this.apiKey = config.apiKey || null;
+    this.host = config.host;
+    this.port = config.port;
     const baseURL = `http://${config.host}:${config.port}`;
 
     this.client = axios.create({
