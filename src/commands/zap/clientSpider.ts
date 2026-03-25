@@ -106,6 +106,28 @@ export const clientSpiderCommand: yargs.CommandModule = {
       } else {
         log.warn(`Scan ended with status: ${status.state}`);
       }
+
+      log.info('Fetching discovered URLs from ZAP...');
+      const urls = await zap.core.getUrls();
+      const targetUrls = urls.urls.filter(u => u.startsWith(argv.url as string));
+      
+      log.success(`Found ${targetUrls.length} URLs from client spider scan`);
+      
+      if (targetUrls.length > 0) {
+        log.info('Discovered URLs:');
+        targetUrls.forEach((url, i) => {
+          log.info(`  ${i + 1}. ${url}`);
+        });
+      }
+
+      const sites = await zap.core.getSites();
+      log.info(`Total sites in ZAP: ${sites.sites.length}`);
+      sites.sites.forEach(site => {
+        if (site.includes(new URL(argv.url as string).host)) {
+          log.info(`  - ${site}`);
+        }
+      });
+
     } catch (error: any) {
       log.error(`Error: ${error.message}`);
       process.exit(1);
