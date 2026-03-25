@@ -27,37 +27,53 @@ export class SpiderAPI extends ZapBase {
 }
 
 export class AjaxSpiderAPI extends ZapBase {
-  async ajaxSpiderScan(url: string, maxDuration?: number) {
+  async ajaxSpiderScan(url: string, maxDuration?: number, maxDepth?: number, maxStates?: number) {
+    if (maxDuration !== undefined) {
+      await this.request('/JSON/ajaxSpider/action/setOptionMaxDuration', { Integer: maxDuration });
+    }
+    if (maxDepth !== undefined) {
+      await this.request('/JSON/ajaxSpider/action/setOptionMaxCrawlDepth', { Integer: maxDepth });
+    }
+    if (maxStates !== undefined) {
+      await this.request('/JSON/ajaxSpider/action/setOptionMaxCrawlStates', { Integer: maxStates });
+    }
     const params: Record<string, any> = { url };
-    if (maxDuration !== undefined) params.maxDuration = maxDuration;
     const response = await this.request<{ scan: string }>('/JSON/ajaxSpider/action/scan', params);
     return response.scan;
   }
 
   async ajaxSpiderStatus(): Promise<{ status: string; nodesVisited: number }> {
-    const response = await this.request<any>('/JSON/ajaxSpider/view/status');
-    
     let status = '';
     let nodesVisited = 0;
+
+    try {
+      const response = await this.request<any>('/JSON/ajaxSpider/view/status');
     
-    if (typeof response === 'string') {
-      status = response;
-    } else if (response.status) {
-      status = typeof response.status === 'string' ? response.status : response.status.status || '';
+      if (typeof response === 'string') {
+        status = response;
+      } else if (response && response.status) {
+        status = typeof response.status === 'string' ? response.status : response.status.status || '';
+      }
+    } catch (e) {
+      status = 'ERROR';
     }
     
-    const resultsResponse = await this.request<any>('/JSON/ajaxSpider/view/results');
+    try {
+      const resultsResponse = await this.request<any>('/JSON/ajaxSpider/view/results');
     
-    if (resultsResponse.results) {
-      nodesVisited = resultsResponse.results.length;
-    } else if (typeof resultsResponse === 'object') {
-      const keys = Object.keys(resultsResponse);
-      if (keys.length > 0) {
-        const firstKey = keys[0];
-        if (Array.isArray(resultsResponse[firstKey])) {
-          nodesVisited = resultsResponse[firstKey].length;
+      if (resultsResponse && resultsResponse.results) {
+        nodesVisited = resultsResponse.results.length;
+      } else if (resultsResponse && typeof resultsResponse === 'object') {
+        const keys = Object.keys(resultsResponse);
+        if (keys.length > 0) {
+          const firstKey = keys[0];
+          if (Array.isArray(resultsResponse[firstKey])) {
+            nodesVisited = resultsResponse[firstKey].length;
+          }
         }
       }
+    } catch (e) {
+      nodesVisited = 0;
     }
     
     return { status, nodesVisited };
