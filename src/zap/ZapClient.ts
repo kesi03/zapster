@@ -1,7 +1,7 @@
 import { ZapConfig } from '../types';
 import { ZapBase } from './zapBase';
 import { CoreAPI } from './core';
-import { SpiderAPI, AjaxSpiderAPI } from './spider';
+import { SpiderAPI, AjaxSpiderAPI, ClientSpiderAPI } from './spider';
 import { ActiveScanAPI } from './ascan';
 import { PassiveScanAPI } from './pscan';
 import { AlertsAPI } from './alerts';
@@ -22,6 +22,7 @@ export class ZapClient extends ZapBase {
   core: CoreAPI;
   spider: SpiderAPI;
   ajaxSpider: AjaxSpiderAPI;
+  clientSpider: ClientSpiderAPI;
   ascan: ActiveScanAPI;
   pscan: PassiveScanAPI;
   alerts: AlertsAPI;
@@ -44,6 +45,7 @@ export class ZapClient extends ZapBase {
     this.core = new CoreAPI(config);
     this.spider = new SpiderAPI(config);
     this.ajaxSpider = new AjaxSpiderAPI(config);
+    this.clientSpider = new ClientSpiderAPI(config);
     this.ascan = new ActiveScanAPI(config);
     this.pscan = new PassiveScanAPI(config);
     this.alerts = new AlertsAPI(config);

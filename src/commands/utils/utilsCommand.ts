@@ -3,6 +3,7 @@ import { createJUnitResultsCommand } from './createJUnitResults';
 import { getPdfCommand } from './getPdf';
 import { createExcelReportCommand } from './createExcelReport';
 import { getLogsCommand } from './getLogs';
+import { getSiteMapCommand } from './getSiteMap';
 
 export const utilsCommand: yargs.CommandModule = {
   command: 'utils',
@@ -13,6 +14,7 @@ export const utilsCommand: yargs.CommandModule = {
       .command(getPdfCommand)
       .command(createExcelReportCommand)
       .command(getLogsCommand)
+      .command(getSiteMapCommand)
       .demandCommand(1, 'Specify a utils subcommand');
   },
   handler: () => {

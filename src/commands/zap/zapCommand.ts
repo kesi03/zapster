@@ -18,6 +18,8 @@ import { getAlertsCommand } from './getAlerts';
 import { getVersionCommand } from './getVersion';
 import { automateCommand } from './automate';
 import { generatePlanCommand } from './generatePlan';
+import { clientSpiderCommand } from './clientSpider';
+import { sitemapScanCommand } from './sitemapScan';
 
 export const zapCommand: yargs.CommandModule = {
   command: 'zap',
@@ -43,6 +45,8 @@ export const zapCommand: yargs.CommandModule = {
       .command(getVersionCommand)
       .command(automateCommand)
       .command(generatePlanCommand)
+      .command(clientSpiderCommand)
+      .command(sitemapScanCommand)
       .demandCommand(1, 'Specify a zap subcommand');
   },
   handler: () => {
