@@ -25,6 +25,7 @@
     "zap:get-report": "ts-node src/index.ts zap get-report",
     "zap:get-alerts": "ts-node src/index.ts zap get-alerts",
     "utils:get-logs": "ts-node src/index.ts utils get-logs",
+    "zap:urlOpen": "ts-node src/index.ts zap urlOpen",
     "zap:session": "ts-node src/index.ts zap session",
     "zap:context": "ts-node src/index.ts zap context",
     "zap:users": "ts-node src/index.ts zap users",
