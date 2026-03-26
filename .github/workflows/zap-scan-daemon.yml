@@ -127,7 +127,7 @@ jobs:
         run: pnpm run utils:create-excel-report --workspace zap-results --name zap-report.xlsx
 
       - name: Get Docker Logs
-        run: pnpm run docker:get-docker-log --image ghcr.io/zaproxy/zaproxy:stable --workspace zap-results --name agent.log --container-name zap-scan-${{ github.run_id }}
+        run: pnpm run docker:get-docker-log --image ghcr.io/zaproxy/zaproxy:stable --workspace zap-results --name agent.log --container zap-scan-${{ github.run_id }}
 
       - name: Stop ZAP Daemon
         if: always()
