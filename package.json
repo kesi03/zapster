@@ -46,7 +46,9 @@
     "docker:full-scan": "ts-node src/index.ts docker full-scan",
     "docker:api-scan": "ts-node src/index.ts docker api-scan",
     "docker:pull": "ts-node src/index.ts docker pull",
-    "docker:get-docker-log": "ts-node src/index.ts docker get-docker-log"
+    "docker:get-docker-log": "ts-node src/index.ts docker get-docker-log",
+    "docker:start-daemon": "ts-node src/index.ts docker start-daemon",
+    "docker:stop-daemon": "ts-node src/index.ts docker stop-daemon"
   },
   "keywords": [
     "zap",

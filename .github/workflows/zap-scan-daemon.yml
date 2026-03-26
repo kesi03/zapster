@@ -1,0 +1,172 @@
+name: ZAP Security Scan (Daemon)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL to scan'
+        required: true
+        default: 'http://localhost:3000'
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+      zap_port:
+        description: 'ZAP Port'
+        required: false
+        default: '8080'
+      api_key:
+        description: 'ZAP API Key'
+        required: false
+        default: 'zapr-api-key'
+
+jobs:
+  zap-scan:
+    name: OWASP ZAP Security Scan
+    runs-on: ubuntu-latest
+    env:
+      ZAP_HOST: localhost
+      ZAP_PORT: ${{ inputs.zap_port || '8080' }}
+      ZAP_API_KEY: ${{ inputs.api_key || 'zapr-api-key' }}
+      TARGET_URL: ${{ inputs.target_url || 'http://localhost:3000' }}
+      DEBUG: ${{ inputs.debug || 'false' }}
+      ZAPR_WORKSPACE: zap-results
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: mkdir -p $ZAPR_WORKSPACE
+
+      - name: Start ZAP Daemon
+        run: |
+          pnpm run docker:start-daemon \
+            --port $ZAP_PORT \
+            --api-key $ZAP_API_KEY \
+            --name zap-scan-${{ github.run_id }}
+        env:
+          ZAP_PORT: ${{ inputs.zap_port || '8080' }}
+          ZAP_API_KEY: ${{ inputs.api_key || 'zapr-api-key' }}
+
+      - name: Wait for ZAP to be ready
+        run: |
+          echo "Waiting for ZAP to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:$ZAP_PORT | grep -qE "200|302|401"; then
+              echo "ZAP is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "ZAP failed to start within $timeout seconds"
+          exit 1
+
+      - name: Verify ZAP Connection
+        run: pnpm run zap:version
+
+      - name: Enable Passive Scanning
+        run: pnpm run zap:passive-scan --enable
+
+      - name: Run Spider Scan
+        run: pnpm run zap:base-scan --url ${{ env.TARGET_URL }} --timeout 180000
+
+      - name: Run AJAX Spider Scan
+        run: pnpm run zap:ajax-scan --url ${{ env.TARGET_URL }} --max-duration 5 --timeout 300000
+
+      - name: Run Active Scan
+        run: pnpm run zap:active-scan --url ${{ env.TARGET_URL }} --timeout 600000
+
+      - name: Get Alerts Summary
+        run: pnpm run zap:get-alerts --summary
+
+      - name: Generate JSON Report
+        run: pnpm run zap:get-report --format json --workspace zap-results --name report.json --title "ZAP Security Scan Report"
+
+      - name: Generate HTML Report
+        run: pnpm run zap:get-report --format html --workspace zap-results --name report.html --title "ZAP Security Scan Report"
+
+      - name: Generate PDF Report
+        run: pnpm run utils:get-pdf --workspace zap-results --name report.pdf --title "ZAP Security Scan Report"
+
+      - name: Generate XML Report
+        run: pnpm run zap:get-report --format xml --workspace zap-results --name report.xml --title "ZAP Security Scan Report"
+
+      - name: Generate JUnit Results
+        run: pnpm run utils:create-junit-results --workspace zap-results --name junit-results.xml --title "ZAP Security Scan"
+
+      - name: Generate Alert JSON
+        run: pnpm run zap:get-alerts --workspace zap-results --name alerts.json
+
+      - name: Generate Excel Report
+        run: pnpm run utils:create-excel-report --workspace zap-results --name zap-report.xlsx
+
+      - name: Get Docker Logs
+        run: pnpm run docker:get-docker-log --image ghcr.io/zaproxy/zaproxy:stable --workspace zap-results --name agent.log --container-name zap-scan-${{ github.run_id }}
+
+      - name: Stop ZAP Daemon
+        if: always()
+        run: pnpm run docker:stop-daemon --name zap-scan-${{ github.run_id }} || true
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: zap-reports-${{ github.run_number }}-${{ github.sha }}
+          path: zap-results/
+          retention-days: 30
+
+      - name: Display Results Summary
+        run: |
+          echo "## ZAP Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ env.TARGET_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f zap-results/report.json ]; then
+            HIGH=$(grep -o '"risk":"HIGH"' zap-results/report.json | wc -l)
+            MEDIUM=$(grep -o '"risk":"MEDIUM"' zap-results/report.json | wc -l)
+            LOW=$(grep -o '"risk":"LOW"' zap-results/report.json | wc -l)
+            INFO=$(grep -o '"risk":"INFORMATIONAL"' zap-results/report.json | wc -l)
+            
+            echo "### Alert Summary" >> $GITHUB_STEP_SUMMARY
+            echo "| Risk Level | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|------------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+            echo "| Informational | $INFO |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Reports" >> $GITHUB_STEP_SUMMARY
+          echo "- JSON Report: \`zap-results/report.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "- HTML Report: \`zap-results/report.html\`" >> $GITHUB_STEP_SUMMARY
+          echo "- PDF Report: \`zap-results/report.pdf\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Excel Report: \`zap-results/zap-report.xlsx\`" >> $GITHUB_STEP_SUMMARY
+          echo "- XML Report: \`zap-results/report.xml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- JUnit Results: \`zap-results/junit-results.xml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Agent Log: \`zap-results/agent.log\`" >> $GITHUB_STEP_SUMMARY
+          echo "- OpenAPI Spec: \`zap-results/zap-openapi.yaml\`" >> $GITHUB_STEP_SUMMARY
