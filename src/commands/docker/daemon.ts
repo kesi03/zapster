@@ -185,7 +185,10 @@ export const startDaemonCommand: yargs.CommandModule = {
           AutoRemove: false,
         },
         Cmd: zapCmd,
-        Env: [`_JAVA_OPTIONS=${args.javaOptions}`],
+        Env: [
+          `_JAVA_OPTIONS=${args.javaOptions}`,
+          `ZAP_API_KEY=${apiKey}`,
+        ],
       };
 
       if (args.network && args.network !== 'host') {
