@@ -235,10 +235,20 @@ export const startDaemonCommand: yargs.CommandModule = {
       setDevOpsVariables([
         { name: 'ZAP_API_KEY', value: apiKey },
         { name: 'ZAP_PROXY_URL', value: `http://${host}:${port}/zap` },
+        { name: 'ZAP_IMAGE_NAME', value: zapImage },
         { name: 'ZAP_CONTAINER_ID', value: container.id },
         { name: 'ZAP_DAEMON_PORT', value: String(port) },
         { name: 'ZAP_DAEMON_HOST', value: host },
       ]);
+
+      log.info('VARIABLES: \n'+JSON.stringify([
+        { name: 'ZAP_API_KEY', value: apiKey },
+        { name: 'ZAP_PROXY_URL', value: `http://${host}:${port}/zap` },
+        { name: 'ZAP_IMAGE_NAME', value: zapImage },
+        { name: 'ZAP_CONTAINER_ID', value: container.id },
+        { name: 'ZAP_DAEMON_PORT', value: String(port) },
+        { name: 'ZAP_DAEMON_HOST', value: host },
+      ],null,2))
       
       log.info(`\nTo stop the daemon, run:`);
       log.info(`  zapr docker stop-daemon ${args.name ? `-N ${args.name}` : ''}`);
