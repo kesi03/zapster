@@ -25,7 +25,7 @@ jobs:
     name: OWASP ZAP Security Scan
     runs-on: ubuntu-latest
     env:
-      ZAP_HOST: localhost
+      ZAP_HOST: 0.0.0.0
       ZAP_PORT: ${{ inputs.zap_port || '8080' }}
       ZAP_API_KEY: ${{ inputs.api_key || 'zapr-api-key' }}
       TARGET_URL: ${{ inputs.target_url || 'http://localhost:3000' }}
@@ -54,6 +54,9 @@ jobs:
 
       - name: Build project
         run: pnpm run build
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Create workspace directory
         run: mkdir -p $ZAPR_WORKSPACE
