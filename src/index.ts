@@ -3,6 +3,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { zapCommand } from './commands/zap';
 import { dockerCommand } from './commands/docker';
+import { javaCommand } from './commands/java/javaCommand';
 import { azdoCommand } from './commands/azdo';
 import { utilsCommand } from './commands/utils';
 import { setDebug } from './utils/logger';
@@ -18,6 +19,7 @@ yargs(hideBin(process.argv))
   .strict()
   .command(zapCommand)
   .command(dockerCommand)
+  .command(javaCommand)
   .command(azdoCommand)
   .command(utilsCommand)
   .option('host', {
