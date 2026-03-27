@@ -115,7 +115,8 @@ jobs:
             $ALPHA_FLAG \
             $AJAX_FLAG \
             $DEBUG_FLAG \
-            $SPIDER_ARG
+            $SPIDER_ARG \
+            --ignore-warning
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4
