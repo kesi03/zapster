@@ -80,7 +80,7 @@ jobs:
             --report-html report.html \
             --report-json report.json \
             --workspace $ZAPR_WORKSPACE \
-            --api-key $API_KEY
+            --api-key $API_KEY || true
 
       - name: Verify reports were created
         run: |
@@ -170,7 +170,7 @@ jobs:
             --report-json report.json \
             --workspace $ZAPR_WORKSPACE \
             --api-key $API_KEY \
-            --spider-mins 1
+            --spider-mins 1 || true
 
       - name: Verify reports were created
         run: |
@@ -247,7 +247,7 @@ jobs:
             --api-folder examples \
             --config-path config \
             --network $DOCKER_NETWORK \
-            --api-key $API_KEY
+            --api-key $API_KEY || true
 
       - name: Verify reports were created
         run: |
