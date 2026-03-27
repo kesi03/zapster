@@ -1,6 +1,7 @@
 import yargs from 'yargs';
 import { runZapDockerScan, buildZapFullScanArgs } from './dockerScan';
 import { log } from '../../utils/logger';
+import { DEFAULT_JAVA_OPTIONS } from '../../utils/constants';
 
 interface FullScanArgs {
   target: string;
@@ -30,6 +31,13 @@ interface FullScanArgs {
   workspace?: string;
   image?: string;
   network?: string;
+  name?: string;
+  maxResponseSize?: number;
+  dbCacheSize?: number;
+  dbRecoveryLog?: boolean;
+  javaOptions?: string;
+  apiKey?: string;
+  failOnWarn?: boolean;
 }
 
 export const fullScanCommand: yargs.CommandModule = {
@@ -177,6 +185,38 @@ export const fullScanCommand: yargs.CommandModule = {
         alias: 'n',
         type: 'string',
         description: 'Docker network mode or name (e.g., host, bridge, or custom network)',
+      })
+      .option('max-response-size', {
+        alias: 'M',
+        type: 'number',
+        default: 104857600,
+        description: 'Max response body size in bytes (default 100MB)',
+      })
+      .option('db-cache-size', {
+        type: 'number',
+        default: 1000000,
+        description: 'Database cache size',
+      })
+      .option('db-recovery-log', {
+        type: 'boolean',
+        default: false,
+        description: 'Enable database recovery log',
+      })
+      .option('java-options', {
+        type: 'string',
+        default: DEFAULT_JAVA_OPTIONS.join(' '),
+        description: 'Java options (e.g. -Xmx4g)',
+      })
+      .option('api-key', {
+        alias: 'k',
+        type: 'string',
+        description: 'ZAP API key',
+      })
+      .option('fail-on-warn', {
+        alias: 'W',
+        type: 'boolean',
+        default: false,
+        description: 'Return failure exit code on warning',
       });
   },
   handler: async (argv) => {
@@ -199,6 +239,9 @@ export const fullScanCommand: yargs.CommandModule = {
         process.exit(1);
       case 2:
         log.warn('Scan completed with WARN - no failures but warnings found');
+        if (args.failOnWarn) {
+          process.exit(1);
+        }
         break;
       default:
         log.error(`Scan failed with exit code: ${exitCode}`);

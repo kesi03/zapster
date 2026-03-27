@@ -1,7 +1,9 @@
-import { spawnSync } from 'child_process';
+import Docker from 'dockerode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { log } from '../../utils/logger';
+
+const docker = new Docker();
 
 interface DockerScanOptions {
   target: string;
@@ -37,6 +39,12 @@ interface DockerScanOptions {
   workspace?: string;
   image?: string;
   network?: string;
+  name?: string;
+  maxResponseSize?: number;
+  dbCacheSize?: number;
+  dbRecoveryLog?: boolean;
+  javaOptions?: string;
+  apiKey?: string;
 }
 
 export async function runZapDockerScan(
@@ -45,71 +53,156 @@ export async function runZapDockerScan(
   options: DockerScanOptions
 ): Promise<number> {
   const zapImage = options.image || 'ghcr.io/zaproxy/zaproxy:stable';
+  const containerName = options.name || `zap-${scriptName.replace(/[^a-z0-9-]/g, '-')}`;
 
-  log.info(`Pulling ZAP Docker image: ${zapImage}`);
-  await new Promise<void>((resolve) => {
-    const pull = spawnSync('docker', ['pull', zapImage], { stdio: 'inherit' });
-    if (pull.status === 0) {
-      resolve();
-    } else {
-      log.warn('Could not pull image, trying to use local image');
-      resolve();
+  log.info(`Starting ZAP ${scriptName}: ${containerName}`);
+  log.info(`Image: ${zapImage}`);
+
+  try {
+    const existing = await docker.listContainers({ all: true });
+    const existingContainer = existing.find(c => c.Names.includes(`/${containerName}`));
+    
+    if (existingContainer) {
+      if (existingContainer.State === 'running') {
+        log.info(`Stopping existing running container ${containerName}`);
+        const container = docker.getContainer(existingContainer.Id);
+        await container.stop({ t: 0 });
+      }
+      log.info(`Removing existing container ${containerName}`);
+      const container = docker.getContainer(existingContainer.Id);
+      await container.remove({ force: true });
     }
-  });
 
-  const workspace = options.workspace || process.env.ZAPR_WORKSPACE || '.';
-  const hostWorkspace = path.isAbsolute(workspace)
-    ? workspace
-    : path.resolve(process.cwd(), workspace);
+    log.info(`Pulling ZAP Docker image: ${zapImage}`);
+    await new Promise<void>((resolve, reject) => {
+      docker.pull(zapImage, (err: any, stream: NodeJS.ReadableStream) => {
+        if (err) {
+          log.warn(`Could not pull image: ${err.message}, trying to use local image`);
+          resolve();
+          return;
+        }
 
-  if (!fs.existsSync(hostWorkspace)) {
-    fs.mkdirSync(hostWorkspace, { recursive: true });
+        docker.modem.followProgress(stream, (err: any) => {
+          if (err) {
+            log.warn(`Error during pull: ${err.message}, trying to use local image`);
+          }
+          resolve();
+        });
+      });
+    });
+
+    const workspace = options.workspace || process.env.ZAPR_WORKSPACE || '.';
+    const hostWorkspace = path.isAbsolute(workspace)
+      ? workspace
+      : path.resolve(process.cwd(), workspace);
+
+    if (!fs.existsSync(hostWorkspace)) {
+      fs.mkdirSync(hostWorkspace, { recursive: true });
+    }
+
+    const configPath = options.configPath
+      ? (path.isAbsolute(options.configPath) ? options.configPath : path.resolve(process.cwd(), options.configPath))
+      : null;
+
+    const apiFolder = options.apiFolder
+      ? (path.isAbsolute(options.apiFolder) ? options.apiFolder : path.resolve(process.cwd(), options.apiFolder))
+      : null;
+
+    const binds: string[] = [`${hostWorkspace}:/zap/wrk/:rw`];
+    if (configPath) {
+      binds.push(`${configPath}:/zap/cfg/:rw`);
+    }
+    if (apiFolder) {
+      binds.push(`${apiFolder}:/zap/specs/:ro`);
+    }
+
+    const env: string[] = [];
+    if (options.debug) {
+      env.push('DEBUG=true');
+    }
+
+    if (options.javaOptions) {
+      env.push(`_JAVA_OPTIONS=${options.javaOptions}`);
+    }
+
+    if (options.apiKey) {
+      env.push(`ZAP_API_KEY=${options.apiKey}`);
+    }
+
+    if (options.maxResponseSize || options.dbCacheSize || options.dbRecoveryLog !== undefined) {
+      zapArgs.push(
+        '-config', `database.response.bodysize=${options.maxResponseSize || 104857600}`,
+        '-config', `database.cache.size=${options.dbCacheSize || 1000000}`,
+        '-config', `database.recoverylog=${options.dbRecoveryLog ? 'true' : 'false'}`
+      );
+    }
+
+    const createOptions: Docker.ContainerCreateOptions = {
+      name: containerName,
+      Image: zapImage,
+      Env: env,
+      Cmd: zapArgs,
+      HostConfig: {
+        AutoRemove: true,
+        Binds: binds,
+        ExtraHosts: ['host.docker.internal:host-gateway'],
+        PortBindings: {},
+      },
+    };
+
+    if (options.network && options.network !== 'host') {
+      createOptions.HostConfig!.NetworkMode = options.network;
+    }
+
+    if (options.port) {
+      createOptions.ExposedPorts = {
+        [`${options.port}/tcp`]: {},
+      };
+      createOptions.HostConfig!.PortBindings = {
+        [`${options.port}/tcp`]: [{ HostPort: String(options.port) }],
+      };
+    }
+
+    log.info(`Creating container ${containerName}...`);
+    const container = await docker.createContainer(createOptions);
+    await container.start();
+
+    const maxAttempts = (options.timeoutMins || 30) * 20;
+    let lastStatus = '';
+    let attempt = 0;
+
+    while (attempt < maxAttempts) {
+      const info = await container.inspect();
+      
+      if (!info.State.Running) {
+        const exitCode = info.State.ExitCode ?? 0;
+        
+        if (exitCode === 0 || exitCode === 1 || exitCode === 2) {
+          return exitCode;
+        }
+        
+        const logs = await container.logs({ stdout: true, stderr: true });
+        log.error(`Container exited with code: ${exitCode}`);
+        log.error(`Container logs:\n${logs}`);
+        return exitCode;
+      }
+
+      if (info.State.Status !== lastStatus) {
+        lastStatus = info.State.Status;
+        log.info(`Container status: ${lastStatus}`);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      attempt++;
+    }
+
+    log.warn('Timeout reached, attempting to stop container');
+    await container.stop({ t: 0 });
+    return 1;
+  } catch (error: any) {
+    log.error(`Failed to run ZAP ${scriptName}: ${error.message}`);
+    return 1;
   }
-
-  const configPath = options.configPath
-    ? (path.isAbsolute(options.configPath) ? options.configPath : path.resolve(process.cwd(), options.configPath))
-    : null;
-
-  const apiFolder = options.apiFolder
-    ? (path.isAbsolute(options.apiFolder) ? options.apiFolder : path.resolve(process.cwd(), options.apiFolder))
-    : null;
-
-  const dockerFlags: string[] = ['run', '--rm'];
-
-  if (options.network && options.network !== 'host') {
-    dockerFlags.push('--network', options.network);
-  } else {
-    dockerFlags.push('--network', 'host');
-  }
-
-  dockerFlags.push(
-    '-v', `${hostWorkspace}:/zap/wrk/:rw`,
-    '-v', `${configPath || hostWorkspace}:/zap/cfg/:rw`,
-    '-v', `${apiFolder || hostWorkspace}:/zap/specs/:ro`
-  );
-
-  if (options.debug) {
-    dockerFlags.push('-e', 'DEBUG=true');
-  }
-
-  if (options.port) {
-    dockerFlags.push('-p', `${options.port}:8080`);
-  }
-
-  dockerFlags.push(zapImage);
-
-  const finalArgs = [...dockerFlags, ...zapArgs];
-
-  log.info(`Starting ZAP ${scriptName}...`);
-  log.info(`Target: ${options.target}`);
-  log.info(`Command: docker ${finalArgs.join(' ')}`);
-
-  const result = spawnSync('docker', finalArgs, {
-    stdio: 'inherit',
-    shell: true
-  });
-
-  return result.status ?? 0;
 }
 
 export function buildZapBaselineArgs(options: DockerScanOptions): string[] {

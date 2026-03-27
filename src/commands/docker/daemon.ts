@@ -3,6 +3,7 @@ import Docker from 'dockerode';
 import { log } from '../../utils/logger';
 import { setDevOpsVariables } from '../../utils/devops';
 import axios from 'axios';
+import { DEFAULT_JAVA_OPTIONS } from '../../utils/constants';
 
 const docker = new Docker();
 
@@ -105,9 +106,8 @@ export const startDaemonCommand: yargs.CommandModule = {
         description: 'Max response body size in bytes (default 100MB)',
       })
       .option('java-options', {
-        alias: 'J',
         type: 'string',
-        default: '-Xms4g -Xmx4g -XX:+UseZGC -Xss512k -XX:+UseContainerSupport -XX:MaxRAMPercentage=80',
+        default: DEFAULT_JAVA_OPTIONS.join(' '),
         description: 'Java options (e.g. -Xmx4g)',
       })
       .option('db-cache-size', {

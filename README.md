@@ -222,6 +222,7 @@ Available subcommands:
 - `baseline-scan` - ZAP Baseline Scan
 - `full-scan` - ZAP Full Scan
 - `api-scan` - ZAP API Scan
+- `automate` - Run ZAP Automation
 - `pull` - Pull Docker Image
 - `get-docker-log` - Get Docker Container Logs
 - `start-daemon` - Start ZAP Daemon
@@ -250,6 +251,9 @@ Options:
   --workspace, -w          Output directory
   --image, -i              ZAP Docker image (default: ghcr.io/zaproxy/zaproxy:stable)
   --network, -n            Docker network mode (default: host)
+  --java-options           Java options (default: -Xms4g -Xmx4g -XX:+UseZGC -Xss512k -XX:+UseContainerSupport -XX:MaxRAMPercentage=80)
+  --api-key, -k            ZAP API key
+  --fail-on-warn, -W       Return failure exit code on warning
 
 Examples:
   zapr docker baseline-scan -t https://example.com
@@ -286,6 +290,9 @@ Options:
   --workspace, -w          Output directory
   --image, -i              ZAP Docker image
   --network, -n            Docker network mode (default: host)
+  --java-options           Java options (default: -Xms4g -Xmx4g -XX:+UseZGC -Xss512k -XX:+UseContainerSupport -XX:MaxRAMPercentage=80)
+  --api-key, -k            ZAP API key
+  --fail-on-warn, -W       Return failure exit code on warning
 
 Examples:
   zapr docker full-scan -t https://example.com
@@ -316,11 +323,38 @@ Options:
   --workspace, -w          Output directory
   --image, -i              ZAP Docker image
   --network, -n            Docker network mode (default: host)
+  --java-options           Java options (default: -Xms4g -Xmx4g -XX:+UseZGC -Xss512k -XX:+UseContainerSupport -XX:MaxRAMPercentage=80)
+  --api-key, -k            ZAP API key
+  --fail-on-warn, -W       Return failure exit code on warning
 
 Examples:
   zapr docker api-scan -t https://api.example.com/openapi.json -f openapi
   zapr docker api-scan -t https://example.com/graphql -f graphql
   zapr docker api-scan -t https://example.com/api.wsdl -f soap --safe-mode
+```
+
+#### `docker automate` - Run ZAP Automation
+
+Run ZAP automation using a YAML plan file via Docker.
+
+```bash
+zapr docker automate --file <plan.yaml> [options]
+
+Options:
+  --file, -f              Path to the ZAP automation plan YAML file (required)
+  --workspace, -w         Workspace directory (default: current directory)
+  --image, -i             ZAP Docker image (default: ghcr.io/zaproxy/zaproxy:stable)
+  --network, -n           Docker network mode (default: host)
+  --debug, -d             Show debug messages
+  --name, -N              Container name
+  --timeout-mins, -t      Minutes to wait for automation to complete (default: 30)
+  --max-response-size, -M Max response body size in bytes (default: 100MB)
+  --java-options          Java options (default: -Xms4g -Xmx4g -XX:+UseZGC -Xss512k -XX:+UseContainerSupport -XX:MaxRAMPercentage=80)
+  --api-key, -k           ZAP API key
+
+Examples:
+  zapr docker automate --file plan.yaml
+  zapr docker automate -f plan.yaml --workspace ./results
 ```
 
 #### `docker pull` - Pull Docker Image
@@ -375,7 +409,7 @@ Options:
   --name, -N              Container name (default: zap-daemon)
   --timeout-mins, -t      Minutes to wait for ZAP to start (default: 1)
   --max-response-size, -M Max response body size in bytes (default: 100MB)
-  --java-options, -J      Java options (default: -Xms4g -Xmx4g -XX:+UseZGC -Xss512k -XX:+UseContainerSupport -XX:MaxRAMPercentage=80)
+  --java-options             Java options (default: -Xms4g -Xmx4g -XX:+UseZGC -Xss512k -XX:+UseContainerSupport -XX:MaxRAMPercentage=80)
 
 Examples:
   zapr docker start-daemon
