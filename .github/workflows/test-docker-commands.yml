@@ -1,0 +1,367 @@
+name: Test Docker Commands
+
+on:
+  workflow_dispatch:
+    inputs:
+      java_options:
+        description: 'Java options to test'
+        required: false
+        default: '-Xms2g -Xmx2g'
+      api_key:
+        description: 'API key to use'
+        required: false
+        default: 'test-api-key'
+      fail_on_warn:
+        description: 'Test fail-on-warn option'
+        required: false
+        default: 'false'
+
+jobs:
+  test-baseline-scan:
+    name: Test Docker Baseline Scan
+    runs-on: ubuntu-latest
+    env:
+      ZAPR_WORKSPACE: test-baseline-results
+      JAVA_OPTIONS: ${{ inputs.java_options || '-Xms2g -Xmx2g' }}
+      API_KEY: ${{ inputs.api_key || 'test-api-key' }}
+      FAIL_ON_WARN: ${{ inputs.fail_on_warn || 'false' }}
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+        options: --shm-size=512m
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: |
+          mkdir -p $ZAPR_WORKSPACE
+          chmod -R 777 $ZAPR_WORKSPACE
+
+      - name: Wait for Juice Shop to be ready
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Juice Shop is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "Juice Shop failed to start within $timeout seconds"
+          exit 1
+
+      - name: Run ZAP Baseline Scan with Java options and API key
+        run: |
+          pnpm run docker:baseline-scan \
+            --target http://localhost:3000 \
+            --report-html report.html \
+            --report-json report.json \
+            --workspace $ZAPR_WORKSPACE \
+            --java-options "$JAVA_OPTIONS" \
+            --api-key $API_KEY
+
+      - name: Verify reports were created
+        run: |
+          ls -la $ZAPR_WORKSPACE/
+          if [ -f "$ZAPR_WORKSPACE/report.html" ]; then
+            echo "✅ HTML report created"
+          else
+            echo "❌ HTML report not found"
+            exit 1
+          fi
+          if [ -f "$ZAPR_WORKSPACE/report.json" ]; then
+            echo "✅ JSON report created"
+          else
+            echo "❌ JSON report not found"
+            exit 1
+          fi
+
+      - name: Test fail-on-warn option
+        if: env.FAIL_ON_WARN == 'true'
+        run: |
+          pnpm run docker:baseline-scan \
+            --target http://localhost:3000 \
+            --workspace $ZAPR_WORKSPACE \
+            --fail-on-warn \
+            --api-key $API_KEY || echo "Expected: fail-on-warn should cause exit on warnings"
+
+  test-full-scan:
+    name: Test Docker Full Scan
+    runs-on: ubuntu-latest
+    env:
+      ZAPR_WORKSPACE: test-full-results
+      JAVA_OPTIONS: ${{ inputs.java_options || '-Xms2g -Xmx2g' }}
+      API_KEY: ${{ inputs.api_key || 'test-api-key' }}
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+        options: --shm-size=512m
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: |
+          mkdir -p $ZAPR_WORKSPACE
+          chmod -R 777 $ZAPR_WORKSPACE
+
+      - name: Wait for Juice Shop to be ready
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Juice Shop is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "Juice Shop failed to start within $timeout seconds"
+          exit 1
+
+      - name: Run ZAP Full Scan with Java options and API key
+        run: |
+          pnpm run docker:full-scan \
+            --target http://localhost:3000 \
+            --report-html report.html \
+            --report-json report.json \
+            --workspace $ZAPR_WORKSPACE \
+            --java-options "$JAVA_OPTIONS" \
+            --api-key $API_KEY \
+            --spider-mins 1
+
+      - name: Verify reports were created
+        run: |
+          ls -la $ZAPR_WORKSPACE/
+          if [ -f "$ZAPR_WORKSPACE/report.html" ]; then
+            echo "✅ HTML report created"
+          else
+            echo "❌ HTML report not found"
+            exit 1
+          fi
+          if [ -f "$ZAPR_WORKSPACE/report.json" ]; then
+            echo "✅ JSON report created"
+          else
+            echo "❌ JSON report not found"
+            exit 1
+          fi
+
+  test-api-scan:
+    name: Test Docker API Scan
+    runs-on: ubuntu-latest
+    env:
+      ZAPR_WORKSPACE: test-api-scan-results
+      JAVA_OPTIONS: ${{ inputs.java_options || '-Xms2g -Xmx2g' }}
+      API_KEY: ${{ inputs.api_key || 'test-api-key' }}
+      DOCKER_NETWORK: test-api-network
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: |
+          mkdir -p $ZAPR_WORKSPACE
+          chmod -R 777 $ZAPR_WORKSPACE
+
+      - name: Create config directory
+        run: |
+          mkdir -p config
+          chmod -R 777 config
+
+      - name: Create Docker network
+        run: docker network create $DOCKER_NETWORK
+
+      - name: Start VAmPI container
+        run: |
+          docker run -d --name vampi --network $DOCKER_NETWORK erev0s/vampi:latest
+          sleep 10
+
+      - name: Run ZAP API Scan with Java options and API key
+        run: |
+          pnpm run docker:api-scan \
+            --target /zap/specs/VAmPI-openapi.yml \
+            --format openapi \
+            --host-override http://vampi:5000 \
+            --report-html report.html \
+            --report-json report.json \
+            --workspace $ZAPR_WORKSPACE \
+            --api-folder examples \
+            --config-path config \
+            --network $DOCKER_NETWORK \
+            --java-options "$JAVA_OPTIONS" \
+            --api-key $API_KEY
+
+      - name: Verify reports were created
+        run: |
+          ls -la $ZAPR_WORKSPACE/
+          if [ -f "$ZAPR_WORKSPACE/report.html" ]; then
+            echo "✅ HTML report created"
+          else
+            echo "❌ HTML report not found"
+            exit 1
+          fi
+          if [ -f "$ZAPR_WORKSPACE/report.json" ]; then
+            echo "✅ JSON report created"
+          else
+            echo "❌ JSON report not found"
+            exit 1
+          fi
+
+      - name: Cleanup Docker resources
+        if: always()
+        run: |
+          docker stop vampi 2>/dev/null || true
+          docker rm vampi 2>/dev/null || true
+          docker network rm $DOCKER_NETWORK 2>/dev/null || true
+
+  test-automate:
+    name: Test Docker Automate
+    runs-on: ubuntu-latest
+    env:
+      ZAPR_WORKSPACE: test-automate-results
+      JAVA_OPTIONS: ${{ inputs.java_options || '-Xms2g -Xmx2g' }}
+      API_KEY: ${{ inputs.api_key || 'test-api-key' }}
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+        options: --shm-size=512m
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: |
+          mkdir -p $ZAPR_WORKSPACE
+          chmod -R 777 $ZAPR_WORKSPACE
+
+      - name: Wait for Juice Shop to be ready
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Juice Shop is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "Juice Shop failed to start within $timeout seconds"
+          exit 1
+
+      - name: Create automation plan file
+        run: |
+          cat > $ZAPR_WORKSPACE/plan.yaml << 'EOF'
+          jobs:
+            - name: passiveScan
+              parameters:
+                context:
+                  - name: url
+                    value: "http://juice-shop:3000"
+                tests:
+                  - name: passive-scan-config
+                    parameters:
+                      scanOnlyInScope: true
+                      maxDuration: 1
+          EOF
+
+      - name: Run ZAP Automation with Java options and API key
+        run: |
+          pnpm run docker:automate \
+            --file $ZAPR_WORKSPACE/plan.yaml \
+            --workspace $ZAPR_WORKSPACE \
+            --java-options "$JAVA_OPTIONS" \
+            --api-key $API_KEY \
+            --network test-automate-network \
+            --timeout-mins 10
+
+      - name: Verify output was created
+        run: |
+          ls -la $ZAPR_WORKSPACE/
+          echo "✅ Automation completed"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f zap-automate 2>/dev/null || true
