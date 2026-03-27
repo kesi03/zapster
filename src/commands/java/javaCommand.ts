@@ -22,17 +22,17 @@ export const javaCommand: yargs.CommandModule = {
   describe: 'Java-based ZAP commands (using pm2)',
   builder: (yargs) => {
     return yargs
-      .command(automateCommand)
-      .command(stopAutomateCommand)
-      .demandCommand(1, 'Specify a java subcommand: automate, stop');
+      .command(daemonCommand)
+      .command(stopDaemonCommand)
+      .demandCommand(1, 'Specify a java subcommand: daemon, stop');
   },
   handler: () => {
     yargs.showHelp();
   },
 };
 
-export const automateCommand: yargs.CommandModule = {
-  command: 'automate',
+export const daemonCommand: yargs.CommandModule = {
+  command: 'daemon',
   describe: 'Start ZAP as a daemon using Java and pm2',
   builder: (yargs) => {
     return yargs
@@ -161,7 +161,7 @@ ${cmd}
   },
 };
 
-export const stopAutomateCommand: yargs.CommandModule = {
+export const stopDaemonCommand: yargs.CommandModule = {
   command: 'stop',
   describe: 'Stop ZAP daemon managed by pm2',
   builder: (yargs) => {

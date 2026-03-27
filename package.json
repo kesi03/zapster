@@ -50,7 +50,7 @@
     "docker:get-docker-log": "ts-node src/index.ts docker get-docker-log",
     "docker:start-daemon": "ts-node src/index.ts docker start-daemon",
     "docker:stop-daemon": "ts-node src/index.ts docker stop-daemon",
-    "java:automate": "ts-node src/index.ts java automate",
+    "java:daemon": "ts-node src/index.ts java daemon",
     "java:stop": "ts-node src/index.ts java stop"
   },
   "keywords": [
