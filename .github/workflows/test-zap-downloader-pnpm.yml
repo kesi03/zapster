@@ -28,5 +28,11 @@ jobs:
       - name: Build project
         run: pnpm run build
 
+      - name: Run offline pack
+        run: pnpm run offline:pack -o zap-offline.tar
+
+      - name: Run offline unpack
+        run: pnpm run offline:unpack -i zap-offline.tar -o zap-workspace
+
       - name: Start ZAP Daemon
-        run: pnpm run daemon:start
+        run: pnpm daemon:start -t zap-workspace/workspace/default.toml
