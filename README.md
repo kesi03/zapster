@@ -17,6 +17,7 @@ A comprehensive CLI tool for OWASP ZAP (Zed Attack Proxy) security scanning.
     - [Advanced Proxy Management](#advanced-proxy-management)
     - [Configuration](#configuration-1)
   - [Docker Scan Commands](#docker-scan-commands)
+  - [Config Commands](#config-commands)
   - [Daemon Commands](#daemon-commands)
   - [Report Commands](#report-commands)
   - [Azure DevOps Integration](#azure-devops-integration)
@@ -270,6 +271,164 @@ Available subcommands:
 - `start-daemon` - Start ZAP Daemon
 - `stop-daemon` - Stop ZAP Daemon
 
+#### TOML Configuration for Docker Commands
+
+All Docker commands support TOML configuration files via the `-t, --toml` option. This allows you to store all your scan parameters in a configuration file instead of passing them as command-line arguments.
+
+```bash
+# Using TOML config
+zapr docker baseline-scan -t config/zap-baseline.toml
+zapr docker full-scan -t config/zap-fullscan.toml
+zapr docker api-scan -t config/zap-apiscan.toml
+zapr docker automate -f plan.yaml -t config/zap-automate.toml
+zapr docker start-daemon -t config/zap-daemon.toml
+```
+
+CLI arguments take precedence over TOML values, so you can use a config file with overrides.
+
+##### TOML Configuration Sections
+
+The TOML files support the following sections:
+
+```toml
+[DOCKER]
+IMAGE = "ghcr.io/zaproxy/zaproxy:stable"   # Docker image
+PORT = 8080                                  # Proxy port
+HOST = "0.0.0.0"                             # Host to bind to
+API_PORT = 8080                             # API port (daemon only)
+NETWORK = "host"                            # Docker network mode
+MAX_RESPONSE_SIZE = 104857600               # Max response size in bytes
+DB_CACHE_SIZE = 1000000                    # Database cache size
+DB_RECOVERY_LOG = false                    # Enable database recovery log
+TIMEOUT_MINS = 30                          # Timeout in minutes
+NAME = "zap-container"                      # Container name
+
+[JAVA_OPTIONS]
+flags = [
+  "-Xms4g",
+  "-Xmx4g",
+  "-XX:+UseZGC",
+  "-Xss512k",
+  "-XX:+UseContainerSupport",
+  "-XX:MaxRAMPercentage=80"
+]
+
+[CONFIG]
+flags = [
+  "api.key=my-secret-key",
+  "api.addrs.addr.name=.*",
+  "api.addrs.addr.regex=true"
+]
+
+# Scan-specific options (for baseline/full/api-scan)
+[SCAN]
+TARGET = "https://example.com"              # Target URL
+SPIDER_MINS = 1                             # Spider duration
+REPORT_HTML = "report.html"                 # Output report
+MIN_LEVEL = "WARN"                          # Minimum alert level
+AJAX_SPIDER = false                         # Use AJAX spider
+FAIL_ON_WARN = false                        # Exit with failure on warning
+
+# Volume mappings: host_path = container_path
+[VOLUMES]
+"./local-config" = "/zap/cfg"
+"./api-specs" = "/zap/specs"
+"./data" = "/zap/wrk"
+```
+
+##### Example TOML Files
+
+Example configuration files are provided in the `config/` directory:
+
+| Command | Example File |
+|---------|-------------|
+| `docker start-daemon` | `config/zap-daemon.toml.example` |
+| `docker baseline-scan` | `config/zap-baseline.toml.example` |
+| `docker full-scan` | `config/zap-fullscan.toml.example` |
+| `docker api-scan` | `config/zap-apiscan.toml.example` |
+| `docker automate` | `config/zap-automate.toml.example` |
+
+Copy an example file and modify it to suit your needs:
+
+```bash
+# Copy example config
+cp config/zap-baseline.toml.example config/my-baseline.toml
+
+# Edit the configuration
+vim config/my-baseline.toml
+
+# Run with your config
+zapr docker baseline-scan -t config/my-baseline.toml
+
+# Override specific options from CLI
+zapr docker baseline-scan -t config/my-baseline.toml --target https://other.com
+```
+
+##### Dynamic TOML for CI/CD Pipelines
+
+You can generate TOML files dynamically with environment variables using the included script:
+
+```bash
+# Generate TOML from template with environment variables
+ZAP_IMAGE=my-custom-image ZAP_PORT=9090 zapr config generate-toml \
+  -i config/zap-docker.toml.template \
+  -o config/generated.toml
+
+# Then use the generated config
+zapr docker start-daemon -t config/generated.toml
+```
+
+**Template Syntax:**
+- `${VAR}` - Replace with environment variable value
+- `${VAR:-default}` - Use default value if VAR is not set
+
+**Example GitHub Actions Workflow:**
+
+```yaml
+jobs:
+  zap-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate TOML config
+        run: |
+          ZAP_IMAGE=${{ vars.ZAP_IMAGE || 'ghcr.io/zaproxy/zaproxy:stable' }} \
+          ZAP_PORT=${{ vars.ZAP_PORT || '8080' }} \
+          ZAP_API_KEY=${{ secrets.ZAP_API_KEY }} \
+          ZAP_NETWORK=${{ vars.ZAP_NETWORK || 'host' }} \
+          zapr config generate-toml \
+            config/zap-docker.toml.template \
+            config/zap.toml
+          
+      - name: Start ZAP Daemon
+        run: pnpm run docker:start-daemon -t config/zap.toml
+        
+      - name: Run Baseline Scan
+        run: pnpm run docker:baseline-scan -t https://example.com -t config/zap.toml
+```
+
+**Example Azure DevOps Pipeline:**
+
+```yaml
+steps:
+  - script: |
+      ZAP_IMAGE=$(ZAP_IMAGE) \
+      ZAP_PORT=$(ZAP_PORT) \
+      ZAP_API_KEY=$(ZAP_API_KEY) \
+      zapr config generate-toml \
+        -i config/zap-docker.toml.template \
+        -o config/zap.toml
+    env:
+      ZAP_IMAGE: $(zapImage)
+      ZAP_PORT: $(zapPort)
+      ZAP_API_KEY: $(zapApiKey)
+      
+  - script: pnpm run docker:start-daemon -t config/zap.toml
+```
+
+For more details on the `config generate-toml` command and environment variables, see [Config Commands](#config-commands).
+
 #### `docker baseline-scan` - ZAP Baseline Scan
 
 Run a passive baseline scan that spiders the target for a limited time and checks for common security issues without performing active attacks.
@@ -279,6 +438,7 @@ zapr docker baseline-scan --target <url> [options]
 
 Options:
   --target, -t            Target URL with protocol (required)
+  --toml, -t             Path to TOML configuration file
   --config-file, -c       Config file to set rules to INFO/IGNORE/FAIL
   --config-url, -u        URL of config file
   --gen-file, -g          Generate default config file
@@ -486,6 +646,153 @@ Examples:
   zapr docker stop-daemon
   zapr docker stop-daemon --name my-zap --force
 ```
+
+---
+
+### Config Commands (`config`)
+
+Configuration utilities for generating and managing TOML configuration files.
+
+```bash
+zapr config <subcommand> [options]
+```
+
+Available subcommands:
+- `generate-toml` - Generate TOML from template with environment variables
+
+#### `config generate-toml` - Generate TOML from Template
+
+Generate a TOML configuration file from a template by substituting environment variables. This is useful for CI/CD pipelines where you want to inject dynamic values.
+
+```bash
+zapr config generate-toml [options]
+
+Options:
+  -i, --input    Input TOML template file (required)
+  -o, --output   Output TOML file (default: input filename with .generated.toml suffix)
+  -x, --prefix   Environment variable prefix
+  -v, --verbose  Show verbose output
+
+Examples:
+  # Basic usage with environment variables
+  ZAP_IMAGE=my-custom-image ZAP_PORT=9090 zapr config generate-toml \
+    -i config/zap-docker.toml.template \
+    -o config/zap.toml
+
+  # Generate with default values
+  zapr config generate-toml -i config/zap-baseline.toml.template
+
+  # Use with prefix for namespaced variables
+  MYAPP_ZAP_IMAGE=custom-image zapr config generate-toml \
+    -i config/zap-docker.toml.template \
+    -x MYAPP_
+```
+
+**Template Syntax:**
+- `${VAR}` - Replace with environment variable value
+- `${VAR:-default}` - Use default value if VAR is not set
+
+##### GitHub Actions Example
+
+```yaml
+name: ZAP Security Scan
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  zap-scan:
+    runs-on: ubuntu-latest
+    env:
+      ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:stable
+      ZAP_PORT: 8080
+      ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
+      ZAP_NETWORK: host
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate TOML config
+        run: |
+          zapr config generate-toml \
+            -i config/zap-docker.toml.template \
+            -o config/zap.toml
+
+      - name: Start ZAP Daemon
+        run: zapr docker start-daemon -t config/zap.toml
+
+      - name: Run Baseline Scan
+        run: |
+          zapr docker baseline-scan \
+            -t https://example.com \
+            -t config/zap.toml \
+            --report-html report.html
+
+      - name: Stop ZAP Daemon
+        if: always()
+        run: zapr docker stop-daemon
+```
+
+##### Azure DevOps Pipeline Example
+
+```yaml
+trigger:
+  - main
+
+stages:
+  - stage: ZAP_Scan
+    variables:
+      zapImage: 'ghcr.io/zaproxy/zaproxy:stable'
+      zapPort: '8080'
+      zapNetwork: 'host'
+    jobs:
+      - job: Security_Scan
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - script: |
+              zapr config generate-toml \
+                -i config/zap-docker.toml.template \
+                -o config/zap.toml
+            env:
+              ZAP_IMAGE: $(zapImage)
+              ZAP_PORT: $(zapPort)
+              ZAP_NETWORK: $(zapNetwork)
+              ZAP_API_KEY: $(zapApiKey)
+
+          - script: zapr docker start-daemon -t config/zap.toml
+            env:
+              ZAP_API_KEY: $(zapApiKey)
+
+          - script: |
+              zapr docker baseline-scan \
+                -t https://example.com \
+                -t config/zap.toml \
+                --report-html $(Build.ArtifactStagingDirectory)/report.html
+            continueOnError: true
+
+          - script: zapr docker stop-daemon
+            condition: always()
+```
+
+##### Available Environment Variables for Templates
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ZAP_IMAGE` | `ghcr.io/zaproxy/zaproxy:stable` | Docker image |
+| `ZAP_PORT` | `8080` | Proxy port |
+| `ZAP_HOST` | `0.0.0.0` | Host to bind to |
+| `ZAP_API_PORT` | `8080` | API port |
+| `ZAP_NAME` | `zap-daemon` | Container name |
+| `ZAP_NETWORK` | `host` | Docker network |
+| `ZAP_MAX_RESPONSE_SIZE` | `104857600` | Max response size |
+| `ZAP_DB_CACHE_SIZE` | `1000000` | Database cache size |
+| `ZAP_TIMEOUT_MINS` | `2` | Timeout in minutes |
+| `ZAP_WORKSPACE` | `.` | Workspace directory |
+| `ZAP_API_KEY` | (none) | API key |
+| `ZAP_JAVA_XMS` | `-Xms4g` | Initial heap size |
+| `ZAP_JAVA_XMX` | `-Xmx4g` | Max heap size |
 
 #### `zap forced-browse` - Forced Browsing
 

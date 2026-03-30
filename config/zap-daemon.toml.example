@@ -1,0 +1,36 @@
+# ZAP Daemon Configuration
+# Usage: zapr docker start-daemon -t config/zap-daemon.toml
+
+[DOCKER]
+IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
+PORT = 8080
+HOST = "0.0.0.0"
+API_PORT = 8080
+NAME = "zap-daemon"
+NETWORK = "host"
+MAX_RESPONSE_SIZE = 104857600
+DB_CACHE_SIZE = 1000000
+DB_RECOVERY_LOG = false
+TIMEOUT_MINS = 2
+
+# Volume mappings: host_path = container_path
+[VOLUMES]
+# "./data" = "/zap/wrk"
+# "./scripts" = "/zap/scripts"
+
+[JAVA_OPTIONS]
+flags = [
+  "-Xms4g",
+  "-Xmx4g",
+  "-XX:+UseZGC",
+  "-Xss512k",
+  "-XX:+UseContainerSupport",
+  "-XX:MaxRAMPercentage=80"
+]
+
+[CONFIG]
+flags = [
+  "api.key=mysupersecretkey",
+  "api.addrs.addr.name=.*",
+  "api.addrs.addr.regex=true"
+]

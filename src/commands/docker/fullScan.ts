@@ -1,9 +1,10 @@
 import yargs from 'yargs';
-import { runZapDockerScan, buildZapFullScanArgs } from './dockerScan';
+import { runZapDockerScan, buildZapFullScanArgs, loadDockerConfig, resolveDockerOptions } from './dockerScan';
 import { log } from '../../utils/logger';
 import { DEFAULT_JAVA_OPTIONS } from '../../utils/constants';
 
 interface FullScanArgs {
+  toml?: string;
   target: string;
   configFile?: string;
   configUrl?: string;
@@ -45,6 +46,11 @@ export const fullScanCommand: yargs.CommandModule = {
   describe: 'Run ZAP full scan using Docker (spider + ajax spider + active scan)',
   builder: (yargs) => {
     return yargs
+      .option('toml', {
+        alias: 't',
+        type: 'string',
+        description: 'Path to zap-docker.toml configuration file',
+      })
       .option('target', {
         alias: 't',
         type: 'string',
@@ -221,11 +227,23 @@ export const fullScanCommand: yargs.CommandModule = {
   handler: async (argv) => {
     const args = argv as unknown as FullScanArgs;
     
+    const { config, useToml } = loadDockerConfig(args);
+    const dockerOpts = resolveDockerOptions(args, config, useToml);
+    
+    const mergedArgs = {
+      ...args,
+      ...dockerOpts,
+      javaOptions: args.javaOptions || dockerOpts.javaOptions || DEFAULT_JAVA_OPTIONS.join(' '),
+    };
+    
     log.info('Starting ZAP Full Scan via Docker...');
     log.info(`Target: ${args.target}`);
+    if (useToml) {
+      log.info(`Config: TOML (${args.toml})`);
+    }
     
-    const scriptArgs = buildZapFullScanArgs(args);
-    const exitCode = await runZapDockerScan('full-scan', scriptArgs, args);
+    const scriptArgs = buildZapFullScanArgs(mergedArgs);
+    const exitCode = await runZapDockerScan('full-scan', scriptArgs, mergedArgs);
     
     log.info(`Scan completed with exit code: ${exitCode}`);
     

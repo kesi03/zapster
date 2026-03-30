@@ -1,9 +1,10 @@
 import yargs from 'yargs';
-import { runZapDockerScan, buildZapApiScanArgs } from './dockerScan';
+import { runZapDockerScan, buildZapApiScanArgs, loadDockerConfig, resolveDockerOptions } from './dockerScan';
 import { log } from '../../utils/logger';
 import { DEFAULT_JAVA_OPTIONS } from '../../utils/constants';
 
 interface ApiScanArgs {
+  toml?: string;
   target: string;
   format: string;
   configFile?: string;
@@ -49,6 +50,11 @@ export const apiScanCommand: yargs.CommandModule = {
   describe: 'Run ZAP API scan using Docker (OpenAPI, SOAP, or GraphQL)',
   builder: (yargs) => {
     return yargs
+      .option('toml', {
+        alias: 't',
+        type: 'string',
+        description: 'Path to zap-docker.toml configuration file',
+      })
       .option('target', {
         alias: 't',
         type: 'string',
@@ -242,12 +248,24 @@ export const apiScanCommand: yargs.CommandModule = {
   handler: async (argv) => {
     const args = argv as unknown as ApiScanArgs;
     
+    const { config, useToml } = loadDockerConfig(args);
+    const dockerOpts = resolveDockerOptions(args, config, useToml);
+    
+    const mergedArgs = {
+      ...args,
+      ...dockerOpts,
+      javaOptions: args.javaOptions || dockerOpts.javaOptions || DEFAULT_JAVA_OPTIONS.join(' '),
+    };
+    
     log.info('Starting ZAP API Scan via Docker...');
     log.info(`Target: ${args.target}`);
     log.info(`Format: ${args.format}`);
+    if (useToml) {
+      log.info(`Config: TOML (${args.toml})`);
+    }
     
-    const scriptArgs = buildZapApiScanArgs(args);
-    const exitCode = await runZapDockerScan('api-scan', scriptArgs, args);
+    const scriptArgs = buildZapApiScanArgs(mergedArgs);
+    const exitCode = await runZapDockerScan('api-scan', scriptArgs, mergedArgs);
     
     log.info(`Scan completed with exit code: ${exitCode}`);
     

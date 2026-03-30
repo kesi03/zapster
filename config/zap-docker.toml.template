@@ -1,0 +1,39 @@
+# ZAP Docker Template - Use with scripts/generate-toml.ts
+# This file uses environment variables for dynamic values
+# Usage: ZAP_IMAGE=my-image ZAP_PORT=8080 ts-node scripts/generate-toml.ts config/zap-docker.toml.template
+
+# You can use ${VAR:-default} syntax for defaults
+
+[DOCKER]
+IMAGE = "${ZAP_IMAGE:-ghcr.io/zaproxy/zaproxy:stable}"
+PORT = "${ZAP_PORT:-8080}"
+HOST = "${ZAP_HOST:-0.0.0.0}"
+API_PORT = "${ZAP_API_PORT:-8080}"
+NAME = "${ZAP_NAME:-zap-daemon}"
+NETWORK = "${ZAP_NETWORK:-host}"
+MAX_RESPONSE_SIZE = "${ZAP_MAX_RESPONSE_SIZE:-104857600}"
+DB_CACHE_SIZE = "${ZAP_DB_CACHE_SIZE:-1000000}"
+DB_RECOVERY_LOG = "${ZAP_DB_RECOVERY_LOG:-false}"
+TIMEOUT_MINS = "${ZAP_TIMEOUT_MINS:-2}"
+WORKSPACE = "${ZAP_WORKSPACE:-.}"
+
+# Volume mappings: host_path = container_path
+[VOLUMES]
+"${ZAP_VOLUME_HOST:-./data}" = "${ZAP_VOLUME_CONTAINER:-/zap/wrk}"
+
+[JAVA_OPTIONS]
+flags = [
+  "${ZAP_JAVA_XMS:--Xms4g}",
+  "${ZAP_JAVA_XMX:--Xmx4g}",
+  "${ZAP_JAVA_ZGC:--XX:+UseZGC}",
+  "${ZAP_JAVA_XSS:--Xss512k}",
+  "${ZAP_JAVA_CONTAINER:--XX:+UseContainerSupport}",
+  "${ZAP_JAVA_RAM:--XX:MaxRAMPercentage=80}"
+]
+
+[CONFIG]
+flags = [
+  "api.key=${ZAP_API_KEY}",
+  "api.addrs.addr.name=.*",
+  "api.addrs.addr.regex=true"
+]

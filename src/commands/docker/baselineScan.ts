@@ -1,9 +1,10 @@
 import yargs from 'yargs';
-import { runZapDockerScan, buildZapBaselineArgs } from './dockerScan';
+import { runZapDockerScan, buildZapBaselineArgs, loadDockerConfig, resolveDockerOptions } from './dockerScan';
 import { log } from '../../utils/logger';
 import { DEFAULT_JAVA_OPTIONS } from '../../utils/constants';
 
 interface BaselineScanArgs {
+  toml?: string;
   target: string;
   configFile?: string;
   configUrl?: string;
@@ -48,6 +49,11 @@ export const baselineScanCommand: yargs.CommandModule = {
   describe: 'Run ZAP baseline scan using Docker (passive scan, no active attacks)',
   builder: (yargs) => {
     return yargs
+      .option('toml', {
+        alias: 't',
+        type: 'string',
+        description: 'Path to zap-docker.toml configuration file',
+      })
       .option('target', {
         alias: 't',
         type: 'string',
@@ -239,11 +245,23 @@ export const baselineScanCommand: yargs.CommandModule = {
   handler: async (argv) => {
     const args = argv as unknown as BaselineScanArgs;
     
+    const { config, useToml } = loadDockerConfig(args);
+    const dockerOpts = resolveDockerOptions(args, config, useToml);
+    
+    const mergedArgs = {
+      ...args,
+      ...dockerOpts,
+      javaOptions: args.javaOptions || dockerOpts.javaOptions || DEFAULT_JAVA_OPTIONS.join(' '),
+    };
+    
     log.info('Starting ZAP Baseline Scan via Docker...');
     log.info(`Target: ${args.target}`);
+    if (useToml) {
+      log.info(`Config: TOML (${args.toml})`);
+    }
     
-    const scriptArgs = buildZapBaselineArgs(args);
-    const exitCode = await runZapDockerScan('baseline-scan', scriptArgs, args);
+    const scriptArgs = buildZapBaselineArgs(mergedArgs);
+    const exitCode = await runZapDockerScan('baseline-scan', scriptArgs, mergedArgs);
     
     log.info(`Scan completed with exit code: ${exitCode}`);
     

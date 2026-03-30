@@ -1,13 +1,77 @@
 import yargs from 'yargs';
 import Docker from 'dockerode';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as toml from '@iarna/toml';
 import { log } from '../../utils/logger';
 import { setDevOpsVariables } from '../../utils/devops';
 import axios from 'axios';
 import { DEFAULT_JAVA_OPTIONS } from '../../utils/constants';
 
+export interface DockerTomlConfig {
+  DOCKER?: {
+    IMAGE?: string;
+    PORT?: number;
+    HOST?: string;
+    API_PORT?: number;
+    NAME?: string;
+    NETWORK?: string;
+    MAX_RESPONSE_SIZE?: number;
+    DB_CACHE_SIZE?: number;
+    DB_RECOVERY_LOG?: boolean;
+    TIMEOUT_MINS?: number;
+    WORKSPACE?: string;
+  };
+  VOLUMES?: {
+    [key: string]: string;
+  };
+  SCAN?: {
+    CONFIG_FILE?: string;
+    CONFIG_URL?: string;
+    GEN_FILE?: string;
+    SPIDER_MINS?: number;
+    REPORT_HTML?: string;
+    REPORT_MD?: string;
+    REPORT_XML?: string;
+    REPORT_JSON?: string;
+    INCLUDE_ALPHA?: boolean;
+    DELAY_SECS?: number;
+    DEFAULT_RULES_INFO?: boolean;
+    IGNORE_WARNING?: boolean;
+    AJAX_SPIDER?: boolean;
+    MIN_LEVEL?: string;
+    CONTEXT_FILE?: string;
+    PROGRESS_FILE?: string;
+    SHORT_OUTPUT?: boolean;
+    USER?: string;
+    ZAP_OPTIONS?: string;
+    HOOK?: string;
+    AUTO?: boolean;
+    AUTO_OFF?: boolean;
+    PLAN_ONLY?: boolean;
+    SCHEMA?: string;
+    HOST_OVERRIDE?: string;
+    CONFIG_PATH?: string;
+    API_FOLDER?: string;
+    FAIL_ON_WARN?: boolean;
+  };
+  JAVA_OPTIONS?: {
+    flags?: string[];
+  };
+  CONFIG?: {
+    flags?: string[];
+  };
+}
+
+function parseTomlConfig(tomlPath: string): DockerTomlConfig {
+  const content = fs.readFileSync(tomlPath, 'utf-8');
+  return toml.parse(content) as DockerTomlConfig;
+}
+
 const docker = new Docker();
 
 interface DaemonStartArgs {
+  toml?: string;
   image?: string;
   port?: number;
   host?: string;
@@ -48,6 +112,11 @@ export const startDaemonCommand: yargs.CommandModule = {
   describe: 'Start ZAP as a daemon in Docker',
   builder: (yargs) => {
     return yargs
+      .option('toml', {
+        alias: 't',
+        type: 'string',
+        description: 'Path to zap-docker.toml configuration file',
+      })
       .option('image', {
         alias: 'i',
         type: 'string',
@@ -124,17 +193,60 @@ export const startDaemonCommand: yargs.CommandModule = {
   handler: async (argv) => {
     const args = argv as unknown as DaemonStartArgs;
     
-    const containerName = args.name || 'zap-daemon';
-    const zapImage = args.image || 'ghcr.io/zaproxy/zaproxy:stable';
+    let config: DockerTomlConfig = {};
+    let useToml = false;
+
+    if (args.toml) {
+      if (!fs.existsSync(args.toml)) {
+        log.error(`TOML file not found: ${args.toml}`);
+        process.exit(1);
+      }
+      log.info(`Using TOML config: ${args.toml}`);
+      config = parseTomlConfig(args.toml);
+      useToml = true;
+    }
+
+    const dockerConfig = config.DOCKER || {};
+    const containerName = args.name || dockerConfig.NAME || 'zap-daemon';
+    const zapImage = args.image || dockerConfig.IMAGE || 'ghcr.io/zaproxy/zaproxy:stable';
     const apiKey = args.apiKey || generateApiKey();
-    const port = args.port || 8080;
-    const apiPort = args.apiPort || 8080;
-    const host = args.host || '0.0.0.0';
+    const port = args.port || dockerConfig.PORT || 8080;
+    const apiPort = args.apiPort || dockerConfig.API_PORT || 8080;
+    const host = args.host || dockerConfig.HOST || '0.0.0.0';
+    const maxResponseSize = args.maxResponseSize || dockerConfig.MAX_RESPONSE_SIZE || 104857600;
+    const dbCacheSize = args.dbCacheSize || dockerConfig.DB_CACHE_SIZE || 1000000;
+    const dbRecoveryLog = args.dbRecoveryLog ?? dockerConfig.DB_RECOVERY_LOG ?? false;
+    const timeoutMins = args.timeoutMins || dockerConfig.TIMEOUT_MINS || 1;
+    const network = args.network || dockerConfig.NETWORK;
+
+    let javaOptions: string;
+    if (useToml && config.JAVA_OPTIONS?.flags) {
+      javaOptions = config.JAVA_OPTIONS.flags.join(' ');
+    } else {
+      javaOptions = args.javaOptions || DEFAULT_JAVA_OPTIONS.join(' ');
+    }
+
+    let configFlags: string[] = [];
+    if (useToml && config.CONFIG?.flags) {
+      configFlags = config.CONFIG.flags;
+    } else {
+      configFlags = [
+        `api.key=${apiKey}`,
+        'api.addrs.addr.name=.*',
+        'api.addrs.addr.regex=true',
+        `database.response.bodysize=${maxResponseSize}`,
+        `database.cache.size=${dbCacheSize}`,
+        `database.recoverylog=${dbRecoveryLog ? 'true' : 'false'}`,
+      ];
+    }
 
     log.info(`Starting ZAP daemon: ${containerName}`);
     log.info(`Image: ${zapImage}`);
     log.info(`Port: ${port}`);
     log.info(`API Key: ${apiKey}`);
+    if (useToml) {
+      log.info(`Config: TOML (${args.toml})`);
+    }
 
     try {
       const existing = await docker.listContainers({ all: true });
@@ -173,12 +285,7 @@ export const startDaemonCommand: yargs.CommandModule = {
         'zap.sh', '-daemon',
         '-host', host,
         '-port', `${apiPort}`,
-        `-config`, `api.key=${apiKey}`,
-        '-config', 'api.addrs.addr.name=.*',
-        '-config', 'api.addrs.addr.regex=true',
-        '-config', `database.response.bodysize=${args.maxResponseSize || 104857600}`,
-        '-config', `database.cache.size=${args.dbCacheSize || 1000000}`,
-        '-config', `database.recoverylog=${args.dbRecoveryLog ? 'true' : 'false'}`,
+        ...configFlags.flatMap(f => ['-config', f]),
       ];
 
       if (args.debug) {
@@ -200,13 +307,13 @@ export const startDaemonCommand: yargs.CommandModule = {
         },
         Cmd: zapCmd,
         Env: [
-          `_JAVA_OPTIONS=${args.javaOptions}`,
+          `_JAVA_OPTIONS=${javaOptions}`,
           `ZAP_API_KEY=${apiKey}`,
         ],
       };
 
-      if (args.network && args.network !== 'host') {
-        (createOptions.HostConfig as any).NetworkMode = args.network;
+      if (network && network !== 'host') {
+        (createOptions.HostConfig as any).NetworkMode = network;
       }
 
       log.info(`Creating container ${containerName}...`);
@@ -214,7 +321,7 @@ export const startDaemonCommand: yargs.CommandModule = {
       await container.start();
 
       log.info('Waiting for ZAP API to respond...');
-      const maxAttempts = (args.timeoutMins || 1) * 20;
+      const maxAttempts = timeoutMins * 20;
       const isReady = await waitForZapReady(port, apiKey, maxAttempts);
 
       if (!isReady) {

@@ -1,0 +1,62 @@
+# ZAP Baseline Scan Template - Use with scripts/generate-toml.ts
+# Usage: ZAP_TARGET=https://example.com ZAP_REPORT_HTML=report.html ts-node scripts/generate-toml.ts config/zap-baseline.toml.template
+
+[DOCKER]
+IMAGE = "${ZAP_IMAGE:-ghcr.io/zaproxy/zaproxy:stable}"
+PORT = "${ZAP_PORT:-8080}"
+HOST = "${ZAP_HOST:-0.0.0.0}"
+NETWORK = "${ZAP_NETWORK:-host}"
+MAX_RESPONSE_SIZE = "${ZAP_MAX_RESPONSE_SIZE:-104857600}"
+DB_CACHE_SIZE = "${ZAP_DB_CACHE_SIZE:-1000000}"
+DB_RECOVERY_LOG = "${ZAP_DB_RECOVERY_LOG:-false}"
+TIMEOUT_MINS = "${ZAP_TIMEOUT_MINS:-30}"
+WORKSPACE = "${ZAP_WORKSPACE:-.}"
+
+[VOLUMES]
+"${ZAP_VOLUME_HOST:-./config}" = "/zap/cfg"
+
+[SCAN]
+TARGET = "${ZAP_TARGET}"
+SPIDER_MINS = "${ZAP_SPIDER_MINS:-1}"
+INCLUDE_ALPHA = "${ZAP_INCLUDE_ALPHA:-false}"
+DELAY_SECS = "${ZAP_DELAY_SECS:-0}"
+DEFAULT_RULES_INFO = "${ZAP_DEFAULT_RULES_INFO:-false}"
+IGNORE_WARNING = "${ZAP_IGNORE_WARNING:-false}"
+AJAX_SPIDER = "${ZAP_AJAX_SPIDER:-false}"
+MIN_LEVEL = "${ZAP_MIN_LEVEL:-WARN}"
+SHORT_OUTPUT = "${ZAP_SHORT_OUTPUT:-false}"
+FAIL_ON_WARN = "${ZAP_FAIL_ON_WARN:-false}"
+AUTO = "${ZAP_AUTO:-false}"
+AUTO_OFF = "${ZAP_AUTO_OFF:-false}"
+PLAN_ONLY = "${ZAP_PLAN_ONLY:-false}"
+
+REPORT_HTML = "${ZAP_REPORT_HTML:-}"
+REPORT_MD = "${ZAP_REPORT_MD:-}"
+REPORT_XML = "${ZAP_REPORT_XML:-}"
+REPORT_JSON = "${ZAP_REPORT_JSON:-}"
+
+CONFIG_FILE = "${ZAP_CONFIG_FILE:-}"
+CONFIG_URL = "${ZAP_CONFIG_URL:-}"
+GEN_FILE = "${ZAP_GEN_FILE:-}"
+CONTEXT_FILE = "${ZAP_CONTEXT_FILE:-}"
+PROGRESS_FILE = "${ZAP_PROGRESS_FILE:-}"
+USER = "${ZAP_USER:-}"
+HOOK = "${ZAP_HOOK:-}"
+ZAP_OPTIONS = "${ZAP_OPTIONS:-}"
+
+[JAVA_OPTIONS]
+flags = [
+  "${ZAP_JAVA_XMS:--Xms4g}",
+  "${ZAP_JAVA_XMX:--Xmx4g}",
+  "${ZAP_JAVA_ZGC:--XX:+UseZGC}",
+  "${ZAP_JAVA_XSS:--Xss512k}",
+  "${ZAP_JAVA_CONTAINER:--XX:+UseContainerSupport}",
+  "${ZAP_JAVA_RAM:--XX:MaxRAMPercentage=80}"
+]
+
+[CONFIG]
+flags = [
+  "api.key=${ZAP_API_KEY:-}",
+  "api.addrs.addr.name=.*",
+  "api.addrs.addr.regex=true"
+]

@@ -1,0 +1,35 @@
+# ZAP Automation Configuration
+# Usage: zapr docker automate -f plan.yaml -t config/zap-automate.toml
+
+[DOCKER]
+IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
+PORT = 8080
+HOST = "0.0.0.0"
+NETWORK = "host"
+MAX_RESPONSE_SIZE = 104857600
+DB_CACHE_SIZE = 1000000
+DB_RECOVERY_LOG = false
+TIMEOUT_MINS = 30
+NAME = "zap-automate"
+WORKSPACE = "."
+
+# Volume mappings: host_path = container_path
+[VOLUMES]
+# "./local-config" = "/zap/cfg"
+# "./scripts" = "/zap/scripts"
+
+[JAVA_OPTIONS]
+flags = [
+  "-Xms4g",
+  "-Xmx4g",
+  "-XX:+UseZGC",
+  "-Xss512k",
+  "-XX:+UseContainerSupport",
+  "-XX:MaxRAMPercentage=80"
+]
+
+[CONFIG]
+flags = [
+  "api.addrs.addr.name=.*",
+  "api.addrs.addr.regex=true"
+]

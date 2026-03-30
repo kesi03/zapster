@@ -1,0 +1,98 @@
+# ZAP Baseline Scan Configuration
+# Usage: zapr docker baseline-scan -t config/zap-baseline.toml
+
+[DOCKER]
+IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
+PORT = 8080
+HOST = "0.0.0.0"
+NETWORK = "host"
+MAX_RESPONSE_SIZE = 104857600
+DB_CACHE_SIZE = 1000000
+DB_RECOVERY_LOG = false
+TIMEOUT_MINS = 30
+WORKSPACE = "."
+
+# Volume mappings: host_path = container_path
+[VOLUMES]
+# "./local-config" = "/zap/cfg"
+# "./api-specs" = "/zap/specs"
+
+[SCAN]
+# Target URL (required - override with CLI: -t)
+# TARGET = "https://www.example.com"
+
+# Spider minutes
+SPIDER_MINS = 1
+
+# Include alpha rules
+INCLUDE_ALPHA = false
+
+# Delay in seconds to wait for passive scanning
+DELAY_SECS = 0
+
+# Default rules not in the config file to INFO
+DEFAULT_RULES_INFO = false
+
+# Do not return failure on warning
+IGNORE_WARNING = false
+
+# Use the Ajax spider in addition to the traditional one
+AJAX_SPIDER = false
+
+# Minimum level to show: PASS, IGNORE, INFO, WARN or FAIL
+MIN_LEVEL = "WARN"
+
+# Short output format - dont show PASSes or example URLs
+SHORT_OUTPUT = false
+
+# Return failure exit code on warning
+FAIL_ON_WARN = false
+
+# Use the automation framework if supported
+AUTO = false
+
+# Do not use the automation framework even if supported
+AUTO_OFF = false
+
+# Generate an automation framework plan but do not run it
+PLAN_ONLY = false
+
+# Report outputs (relative to workspace)
+# REPORT_HTML = "report.html"
+# REPORT_MD = "report.md"
+# REPORT_XML = "report.xml"
+# REPORT_JSON = "report.json"
+
+# Config files
+# CONFIG_FILE = "config.yaml"
+# CONFIG_URL = "https://example.com/config.yaml"
+# GEN_FILE = "gen.yaml"
+
+# Context and progress files
+# CONTEXT_FILE = "context.xml"
+# PROGRESS_FILE = "progress.yaml"
+
+# Authenticated scan
+# USER = "username"
+
+# Custom hooks
+# HOOK = "hooks.py"
+
+# Additional ZAP options
+# ZAP_OPTIONS = "-config aaa=bbb"
+
+[JAVA_OPTIONS]
+flags = [
+  "-Xms4g",
+  "-Xmx4g",
+  "-XX:+UseZGC",
+  "-Xss512k",
+  "-XX:+UseContainerSupport",
+  "-XX:MaxRAMPercentage=80"
+]
+
+[CONFIG]
+flags = [
+  "api.addrs.addr.name=.*",
+  "api.addrs.addr.regex=true"
+]

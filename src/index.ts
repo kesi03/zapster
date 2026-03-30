@@ -6,6 +6,7 @@ import { dockerCommand } from './commands/docker';
 import { azdoCommand } from './commands/azdo';
 import { utilsCommand } from './commands/utils';
 import { daemonCommand } from './commands/daemon/daemonCommand';
+import { configCommand } from './commands/config/index';
 import { setDebug } from './utils/logger';
 
 const debugEnabled = process.env.DEBUG === 'true';
@@ -22,6 +23,7 @@ yargs(hideBin(process.argv))
   .command(azdoCommand)
   .command(utilsCommand)
   .command(daemonCommand)
+  .command(configCommand)
   .option('host', {
     alias: 'H',
     type: 'string',

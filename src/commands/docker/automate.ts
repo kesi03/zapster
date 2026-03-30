@@ -4,10 +4,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { log } from '../../utils/logger';
 import { DEFAULT_JAVA_OPTIONS } from '../../utils/constants';
+import { loadDockerConfig, resolveDockerOptions, parseDockerToml } from './dockerScan';
 
 const docker = new Docker();
 
 interface DockerAutomateArgs {
+  toml?: string;
   file: string;
   workspace?: string;
   image?: string;
@@ -27,6 +29,11 @@ export const dockerAutomateCommand: yargs.CommandModule = {
   describe: 'Run ZAP automation using a YAML plan file via Docker',
   builder: (yargs) => {
     return yargs
+      .option('toml', {
+        alias: 't',
+        type: 'string',
+        description: 'Path to zap-docker.toml configuration file',
+      })
       .option('file', {
         alias: 'f',
         type: 'string',
@@ -95,6 +102,9 @@ export const dockerAutomateCommand: yargs.CommandModule = {
   handler: async (argv) => {
     const args = argv as unknown as DockerAutomateArgs;
 
+    const { config, useToml } = loadDockerConfig(args);
+    const dockerOpts = resolveDockerOptions(args, config, useToml);
+
     const planFile = args.file;
     if (!planFile) {
       log.error('Plan file is required. Use --file or -f');
@@ -107,7 +117,7 @@ export const dockerAutomateCommand: yargs.CommandModule = {
       process.exit(1);
     }
 
-    const workspace = args.workspace || process.env.ZAPR_WORKSPACE || '.';
+    const workspace = args.workspace || dockerOpts.workspace || '.';
     const hostWorkspace = path.isAbsolute(workspace)
       ? workspace
       : path.resolve(process.cwd(), workspace);
@@ -116,12 +126,17 @@ export const dockerAutomateCommand: yargs.CommandModule = {
       fs.mkdirSync(hostWorkspace, { recursive: true });
     }
 
-    const zapImage = args.image || 'ghcr.io/zaproxy/zaproxy:stable';
-    const containerName = args.name || 'zap-automate';
+    const zapImage = args.image || dockerOpts.image || 'ghcr.io/zaproxy/zaproxy:stable';
+    const containerName = args.name || dockerOpts.name || 'zap-automate';
+    const javaOptions = args.javaOptions || dockerOpts.javaOptions || DEFAULT_JAVA_OPTIONS.join(' ');
+    const apiKey = args.apiKey || dockerOpts.apiKey || '';
 
     log.info(`Starting ZAP automation: ${containerName}`);
     log.info(`Image: ${zapImage}`);
     log.info(`Plan file: ${planFilePath}`);
+    if (useToml) {
+      log.info(`Config: TOML (${args.toml})`);
+    }
 
     try {
       const existing = await docker.listContainers({ all: true });
@@ -158,34 +173,45 @@ export const dockerAutomateCommand: yargs.CommandModule = {
         });
       });
 
+      const binds: string[] = [`${hostWorkspace}:/zap/wrk/:rw`];
+
+      if (dockerOpts.volumes) {
+        for (const [hostPath, containerPath] of Object.entries(dockerOpts.volumes)) {
+          const resolvedHostPath = path.isAbsolute(hostPath)
+            ? hostPath
+            : path.resolve(process.cwd(), hostPath);
+          binds.push(`${resolvedHostPath}:${containerPath}:rw`);
+        }
+      }
+
       const createOptions: Docker.ContainerCreateOptions = {
         name: containerName,
         Image: zapImage,
         Env: [
-          `_JAVA_OPTIONS=${args.javaOptions}`,
-          `ZAP_API_KEY=${args.apiKey || ''}`,
+          `_JAVA_OPTIONS=${javaOptions}`,
+          `ZAP_API_KEY=${apiKey}`,
         ],
         Cmd: ['zap.sh', '-cmd', '-autorun', `/zap/wrk/${path.basename(planFilePath)}`],
         HostConfig: {
           AutoRemove: true,
-          Binds: [`${hostWorkspace}:/zap/wrk/:rw`],
+          Binds: binds,
           ExtraHosts: ['host.docker.internal:host-gateway'],
         },
       };
 
-      if (args.network && args.network !== 'host') {
-        (createOptions.HostConfig as any).NetworkMode = args.network;
+      if (dockerOpts.network && dockerOpts.network !== 'host') {
+        (createOptions.HostConfig as any).NetworkMode = dockerOpts.network;
       }
 
       if (args.debug) {
         createOptions.Env?.push('DEBUG=true');
       }
 
-      if (args.maxResponseSize || args.dbCacheSize || args.dbRecoveryLog !== undefined) {
+      if (dockerOpts.maxResponseSize || dockerOpts.dbCacheSize || dockerOpts.dbRecoveryLog !== undefined) {
         const zapOpts = [
-          '-config', `database.response.bodysize=${args.maxResponseSize || 104857600}`,
-          '-config', `database.cache.size=${args.dbCacheSize || 1000000}`,
-          '-config', `database.recoverylog=${args.dbRecoveryLog ? 'true' : 'false'}`
+          '-config', `database.response.bodysize=${dockerOpts.maxResponseSize || 104857600}`,
+          '-config', `database.cache.size=${dockerOpts.dbCacheSize || 1000000}`,
+          '-config', `database.recoverylog=${dockerOpts.dbRecoveryLog ? 'true' : 'false'}`
         ];
         createOptions.Cmd = ['zap.sh', '-cmd', '-autorun', ...zapOpts, `/zap/wrk/${path.basename(planFilePath)}`];
       }
@@ -194,7 +220,7 @@ export const dockerAutomateCommand: yargs.CommandModule = {
       const container = await docker.createContainer(createOptions);
       await container.start();
 
-      const maxAttempts = (args.timeoutMins || 30) * 20;
+      const maxAttempts = dockerOpts.timeoutMins * 20;
       let lastStatus = '';
       let attempt = 0;
 

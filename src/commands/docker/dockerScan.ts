@@ -1,9 +1,81 @@
 import Docker from 'dockerode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as toml from '@iarna/toml';
 import { log } from '../../utils/logger';
+import { DockerTomlConfig } from './daemon';
 
 const docker = new Docker();
+
+export function parseDockerToml(tomlPath: string): DockerTomlConfig {
+  const content = fs.readFileSync(tomlPath, 'utf-8');
+  return toml.parse(content) as DockerTomlConfig;
+}
+
+export function loadDockerConfig(args: { toml?: string }, defaultImage = 'ghcr.io/zaproxy/zaproxy:stable'): { config: DockerTomlConfig; useToml: boolean } {
+  let config: DockerTomlConfig = {};
+  let useToml = false;
+
+  if (args.toml) {
+    if (!fs.existsSync(args.toml)) {
+      log.error(`TOML file not found: ${args.toml}`);
+      process.exit(1);
+    }
+    log.info(`Using TOML config: ${args.toml}`);
+    config = parseDockerToml(args.toml);
+    useToml = true;
+  }
+
+  return { config, useToml };
+}
+
+export function resolveDockerOptions(
+  args: { toml?: string; image?: string; network?: string; name?: string; maxResponseSize?: number; dbCacheSize?: number; dbRecoveryLog?: boolean; javaOptions?: string; apiKey?: string; workspace?: string; port?: number; timeoutMins?: number },
+  config: DockerTomlConfig,
+  useToml: boolean,
+  defaultImage = 'ghcr.io/zaproxy/zaproxy:stable'
+) {
+  const dockerConfig = config.DOCKER || {};
+  const scanConfig = config.SCAN || {};
+
+  return {
+    image: args.image || dockerConfig.IMAGE || defaultImage,
+    network: args.network || dockerConfig.NETWORK,
+    name: args.name || dockerConfig.NAME,
+    maxResponseSize: args.maxResponseSize || dockerConfig.MAX_RESPONSE_SIZE || 104857600,
+    dbCacheSize: args.dbCacheSize || dockerConfig.DB_CACHE_SIZE || 1000000,
+    dbRecoveryLog: args.dbRecoveryLog ?? dockerConfig.DB_RECOVERY_LOG ?? false,
+    javaOptions: args.javaOptions || (config.JAVA_OPTIONS?.flags?.join(' ')) || '',
+    apiKey: args.apiKey || '',
+    workspace: args.workspace || dockerConfig.WORKSPACE || process.env.ZAPR_WORKSPACE || '.',
+    port: args.port || dockerConfig.PORT,
+    timeoutMins: args.timeoutMins || dockerConfig.TIMEOUT_MINS || 30,
+    volumes: config.VOLUMES || {},
+    configFile: scanConfig.CONFIG_FILE,
+    configUrl: scanConfig.CONFIG_URL,
+    genFile: scanConfig.GEN_FILE,
+    spiderMins: scanConfig.SPIDER_MINS,
+    reportHtml: scanConfig.REPORT_HTML,
+    reportMd: scanConfig.REPORT_MD,
+    reportXml: scanConfig.REPORT_XML,
+    reportJson: scanConfig.REPORT_JSON,
+    includeAlpha: scanConfig.INCLUDE_ALPHA,
+    delaySecs: scanConfig.DELAY_SECS,
+    defaultRulesInfo: scanConfig.DEFAULT_RULES_INFO,
+    ignoreWarning: scanConfig.IGNORE_WARNING,
+    ajaxSpider: scanConfig.AJAX_SPIDER,
+    minLevel: scanConfig.MIN_LEVEL,
+    contextFile: scanConfig.CONTEXT_FILE,
+    progressFile: scanConfig.PROGRESS_FILE,
+    shortOutput: scanConfig.SHORT_OUTPUT,
+    user: scanConfig.USER,
+    zapOptions: scanConfig.ZAP_OPTIONS,
+    hook: scanConfig.HOOK,
+    auto: scanConfig.AUTO,
+    autoOff: scanConfig.AUTO_OFF,
+    planOnly: scanConfig.PLAN_ONLY,
+  };
+}
 
 interface DockerScanOptions {
   target: string;
@@ -45,6 +117,7 @@ interface DockerScanOptions {
   dbRecoveryLog?: boolean;
   javaOptions?: string;
   apiKey?: string;
+  volumes?: { [key: string]: string };
 }
 
 export async function runZapDockerScan(
@@ -109,6 +182,15 @@ export async function runZapDockerScan(
       : null;
 
     const binds: string[] = [`${hostWorkspace}:/zap/wrk/:rw`];
+
+    if (options.volumes) {
+      for (const [hostPath, containerPath] of Object.entries(options.volumes)) {
+        const resolvedHostPath = path.isAbsolute(hostPath)
+          ? hostPath
+          : path.resolve(process.cwd(), hostPath);
+        binds.push(`${resolvedHostPath}:${containerPath}:rw`);
+      }
+    }
     if (configPath) {
       binds.push(`${configPath}:/zap/cfg/:rw`);
     }

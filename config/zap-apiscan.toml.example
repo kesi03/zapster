@@ -1,0 +1,101 @@
+# ZAP API Scan Configuration
+# Usage: zapr docker api-scan -t config/zap-apiscan.toml
+
+[DOCKER]
+IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
+PORT = 8080
+HOST = "0.0.0.0"
+NETWORK = "host"
+MAX_RESPONSE_SIZE = 104857600
+DB_CACHE_SIZE = 1000000
+DB_RECOVERY_LOG = false
+TIMEOUT_MINS = 30
+WORKSPACE = "."
+
+# Volume mappings: host_path = container_path
+[VOLUMES]
+# "./local-config" = "/zap/cfg"
+# "./api-specs" = "/zap/specs"
+
+[SCAN]
+# Target API definition URL or file, or GraphQL endpoint URL (required - override with CLI: -t)
+# TARGET = "https://api.example.com/openapi.json"
+
+# API format: openapi, soap, or graphql (required - override with CLI: -f)
+# FORMAT = "openapi"
+
+# Include alpha rules
+INCLUDE_ALPHA = false
+
+# Delay in seconds to wait for passive scanning
+DELAY_SECS = 0
+
+# Default rules not in the config file to INFO
+DEFAULT_RULES_INFO = false
+
+# Do not return failure on warning
+IGNORE_WARNING = false
+
+# Minimum level to show: PASS, IGNORE, INFO, WARN or FAIL
+MIN_LEVEL = "WARN"
+
+# Short output format - dont show PASSes or example URLs
+SHORT_OUTPUT = false
+
+# Safe mode - skip active scan and perform baseline scan only
+SAFE_MODE = false
+
+# Return failure exit code on warning
+FAIL_ON_WARN = false
+
+# Report outputs (relative to workspace)
+# REPORT_HTML = "report.html"
+# REPORT_MD = "report.md"
+# REPORT_XML = "report.xml"
+# REPORT_JSON = "report.json"
+
+# Config files
+# CONFIG_FILE = "config.yaml"
+# CONFIG_URL = "https://example.com/config.yaml"
+# GEN_FILE = "gen.yaml"
+
+# Context and progress files
+# CONTEXT_FILE = "context.xml"
+# PROGRESS_FILE = "progress.yaml"
+
+# Authenticated scan
+# USER = "username"
+
+# Custom hooks
+# HOOK = "hooks.py"
+
+# Additional ZAP options
+# ZAP_OPTIONS = "-config aaa=bbb"
+
+# GraphQL schema location (URL or file)
+# SCHEMA = "https://api.example.com/graphql/schema.json"
+
+# The hostname to override in the (remote) OpenAPI spec
+# HOST_OVERRIDE = "api.example.com"
+
+# Local path to mount as /zap/cfg in the container (for config files)
+# CONFIG_PATH = "./config"
+
+# Local path to mount as /zap/specs in the container (for API specs)
+# API_FOLDER = "./specs"
+
+[JAVA_OPTIONS]
+flags = [
+  "-Xms4g",
+  "-Xmx4g",
+  "-XX:+UseZGC",
+  "-Xss512k",
+  "-XX:+UseContainerSupport",
+  "-XX:MaxRAMPercentage=80"
+]
+
+[CONFIG]
+flags = [
+  "api.addrs.addr.name=.*",
+  "api.addrs.addr.regex=true"
+]
