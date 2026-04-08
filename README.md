@@ -140,7 +140,7 @@ Available subcommands:
 - `get-report` - Generate Reports
 - `get-alerts` - Get Alerts
 - `get-version` - Get ZAP Version
-- `automate` - Run ZAP Automation
+- `automate` - Run ZAP Automation (daemon or docker)
 
 #### `zap base-scan` - Spider Scan
 
@@ -958,12 +958,14 @@ Options:
   -f, --follow               Stream logs (like tail -f)
   -e, --err                  Show error log (stderr)
   -b, --both                 Show both output and error logs
+  -c, --copy                 Copy logs to a file path instead of console
 
 Examples:
   zapr daemon log
   zapr daemon log -n 100
   zapr daemon log --err
   zapr daemon log --follow
+  zapr daemon log --copy ./logs
 ```
 
 ---
@@ -1203,6 +1205,54 @@ Check the connected ZAP version.
 ```bash
 zapr getVersion
 ```
+
+#### `zap automate` - Run ZAP Automation
+
+Run ZAP automation using a YAML plan file. Supports both daemon and docker backends.
+
+```bash
+zapr zap automate <subcommand> [options]
+```
+
+Available subcommands:
+- `daemon` - Run automation against a local ZAP daemon
+- `docker` - Run automation against a ZAP daemon running in Docker
+
+##### `zap automate daemon` - Run Against Local Daemon
+
+Run automation against a local ZAP daemon.
+
+```bash
+zapr zap automate daemon --file <plan.yaml> [options]
+
+Options:
+  -f, --file                 Path to the ZAP automation plan YAML file (required)
+  -w, --workspace            Workspace directory for outputs
+
+Examples:
+  zapr zap automate daemon --file plan.yaml
+  zapr zap automate daemon -f plan.yaml -w ./results
+```
+
+##### `zap automate docker` - Run Against Docker Daemon
+
+Run automation against a ZAP daemon running in Docker.
+
+```bash
+zapr zap automate docker --file <plan.yaml> --container <name> [options]
+
+Options:
+  -f, --file                 Path to the ZAP automation plan YAML file (required)
+  -c, --container            Docker container name or ID (required)
+  -i, --image                Docker image name to find container by
+  -w, --workspace            Workspace directory for outputs
+
+Examples:
+  zapr zap automate docker --file plan.yaml --container zap-daemon
+  zapr zap automate docker -f plan.yaml -c my-zap -w ./results
+```
+
+The automation command provides progress tracking for each job in the plan (spider, activeScan, ajaxSpider, report, etc.) and automatically copies generated reports to the workspace reports directory.
 
 #### `getLogs` - Get Log Configuration
 
