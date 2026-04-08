@@ -6,7 +6,7 @@ on:
       plan_file:
         description: 'Path to ZAP automation plan file'
         required: true
-        default: 'examples/zap-automation.yaml'
+        default: 'examples/zap-automation-daemon.yaml'
       debug:
         description: 'Enable debug logging'
         required: false
@@ -20,7 +20,7 @@ jobs:
       ZAP_HOST: localhost
       ZAP_PORT: 8080
       ZAP_API_KEY: zapr-api-key
-      PLAN_FILE: ${{ inputs.plan_file || 'examples/zap-automation.yaml' }}
+      PLAN_FILE: ${{ inputs.plan_file || 'examples/zap-automation-daemon.yaml' }}
       DEBUG: ${{ inputs.debug || 'false' }}
       ZAPR_WORKSPACE: zap-results
       TOML_FILE: zap-daemon.toml

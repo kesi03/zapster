@@ -1,0 +1,71 @@
+name: "OWASP ZAP Scan Plan - Docker"
+
+env:
+  target: "http://localhost:3000"
+  contexts:
+    - name: "mainContext"
+      urls:
+        - "http://localhost:3000"
+      includePaths:
+        - "http://localhost:3000.*"
+      excludePaths: []
+
+jobs:
+  - type: "passiveScan-config"
+    parameters:
+      maxAlertsPerRule: 0
+
+  - type: "spider"
+    parameters:
+      context: "mainContext"
+      url: "http://localhost:3000"
+
+  - type: "spiderAjax"
+    parameters:
+      context: "mainContext"
+      url: "http://localhost:3000"
+      maxDuration: 5
+
+  - type: "activeScan"
+    parameters:
+      context: "mainContext"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-html"
+      reportDir: "/zap/wrk/zap-results"
+      reportFile: "zap-report.html"
+      format: "html"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-md"
+      reportDir: "/zap/wrk/zap-results"
+      reportFile: "zap-report.md"
+      format: "md"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-xml"
+      reportDir: "/zap/wrk/zap-results"
+      reportFile: "zap-report.xml"
+      format: "xml"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-json"
+      reportDir: "/zap/wrk/zap-results"
+      reportFile: "zap-report.json"
+      format: "json"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-pdf"
+      reportDir: "/zap/wrk/zap-results"
+      reportFile: "zap-report.pdf"
+      format: "pdf"
