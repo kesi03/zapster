@@ -102,6 +102,16 @@ export const daemonAutomateCommand: yargs.CommandModule = {
         }
       }
 
+      if (!zapHome) {
+        if (argv.workspace) {
+          zapHome = path.join(argv.workspace as string, '.zap');
+          log.warn(`ZAP home was undefined, using fallback: ${zapHome}`);
+        } else {
+          log.error('Could not determine ZAP home directory. Use --workspace to specify.');
+          process.exit(1);
+        }
+      }
+
       const planContent = fs.readFileSync(planFile, 'utf-8');
       const plan = yaml.parse(planContent);
 
