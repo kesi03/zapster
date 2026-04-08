@@ -21,27 +21,38 @@ function copyReportsWithTimestamp(srcDir: string, destDir: string): string[] {
     fs.mkdirSync(destDir, { recursive: true });
   }
 
-  const files = fs.readdirSync(srcDir);
-  for (const file of files) {
-    const ext = path.extname(file).toLowerCase();
-    if (!REPORT_EXTENSIONS.includes(ext)) {
-      continue;
+  const findAndCopyReports = (currentDir: string): void => {
+    const files = fs.readdirSync(currentDir);
+    
+    for (const file of files) {
+      const fullPath = path.join(currentDir, file);
+      const stat = fs.statSync(fullPath);
+
+      if (stat.isDirectory()) {
+        findAndCopyReports(fullPath);
+        continue;
+      }
+
+      const ext = path.extname(file).toLowerCase();
+      if (!REPORT_EXTENSIONS.includes(ext)) {
+        continue;
+      }
+
+      let destPath = path.join(destDir, file);
+
+      if (fs.existsSync(destPath)) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const nameWithoutExt = path.basename(file, ext);
+        destPath = path.join(destDir, `${nameWithoutExt}_${timestamp}${ext}`);
+      }
+
+      fs.copyFileSync(fullPath, destPath);
+      copiedFiles.push(destPath);
+      log.info(`Copied report: ${path.basename(destPath)}`);
     }
+  };
 
-    const srcPath = path.join(srcDir, file);
-    let destPath = path.join(destDir, file);
-
-    if (fs.existsSync(destPath)) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const nameWithoutExt = path.basename(file, ext);
-      destPath = path.join(destDir, `${nameWithoutExt}_${timestamp}${ext}`);
-    }
-
-    fs.copyFileSync(srcPath, destPath);
-    copiedFiles.push(destPath);
-    log.info(`Copied report: ${path.basename(destPath)}`);
-  }
-
+  findAndCopyReports(srcDir);
   return copiedFiles;
 }
 
@@ -135,8 +146,8 @@ export const daemonAutomateCommand: yargs.CommandModule = {
       const srcReportDir = path.isAbsolute(reportDir) ? reportDir : path.join(planDir, reportDir);
       const destReportDir = getWorkspacePath('reports');
 
-      log.info(`Copying reports from: ${srcReportDir}`);
-      log.info(`Copying reports to: ${destReportDir}`);
+  log.info(`Looking for reports in: ${srcReportDir}`);
+  log.info(`Copying reports to: ${destReportDir}`);
 
       const copiedFiles = copyReportsWithTimestamp(srcReportDir, destReportDir);
 
