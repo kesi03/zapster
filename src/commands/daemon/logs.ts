@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import fs from "node:fs";
+import path from "node:path";
 import pm2 from "pm2";
 import { Arguments } from "yargs";
 import { PM2BusPacket } from "./types";
@@ -50,6 +51,11 @@ export const logsDaemonCommand = {
         description: "Show both output and error logs",
         type: "boolean",
         default: false,
+      })
+      .option("copy", {
+        alias: "c",
+        description: "Copy logs to a file path instead of printing to console",
+        type: "string",
       });
   },
 
@@ -60,6 +66,7 @@ export const logsDaemonCommand = {
     follow?: boolean;
     err?: boolean;
     both?: boolean;
+    copy?: string;
   }) => {
     const processName = argv.name || "zap-daemon";
     const maxLines = argv.lines ?? 200;
@@ -67,6 +74,7 @@ export const logsDaemonCommand = {
     const follow = argv.follow ?? false;
     const showErr = argv.err ?? false;
     const showBoth = argv.both ?? false;
+    const copyPath = argv.copy;
 
     console.log(chalk.blue(`Fetching logs for PM2 process: ${processName}`));
 
@@ -125,7 +133,26 @@ export const logsDaemonCommand = {
           ? tailLines(fs.readFileSync(errLog, "utf-8"), maxLines)
           : "";
 
-      if (asJson) {
+      if (copyPath) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const baseName = `${processName}-${timestamp}`;
+
+        if (showErr) {
+          const filePath = path.join(copyPath, `${baseName}.err.log`);
+          fs.writeFileSync(filePath, errContent || "");
+          console.log(chalk.green(`Error logs copied to: ${filePath}`));
+        } else if (showBoth) {
+          const outPath = path.join(copyPath, `${baseName}.out.log`);
+          const errPath = path.join(copyPath, `${baseName}.err.log`);
+          fs.writeFileSync(outPath, outContent || "");
+          fs.writeFileSync(errPath, errContent || "");
+          console.log(chalk.green(`Logs copied to: ${outPath}, ${errPath}`));
+        } else {
+          const filePath = path.join(copyPath, `${baseName}.out.log`);
+          fs.writeFileSync(filePath, outContent || "");
+          console.log(chalk.green(`Logs copied to: ${filePath}`));
+        }
+      } else if (asJson) {
         console.log(
           JSON.stringify(
             {
