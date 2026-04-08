@@ -29,3 +29,42 @@ jobs:
   - type: "activeScan"
     parameters:
       context: "mainContext"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-html"
+      reportDir: "zap-results"
+      reportFile: "zap-report.html"
+      format: "html"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-md"
+      reportDir: "zap-results"
+      reportFile: "zap-report.md"
+      format: "md"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-xml"
+      reportDir: "zap-results"
+      reportFile: "zap-report"
+      format: "xml"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-json"
+      reportDir: "zap-results"
+      reportFile: "zap-report.json"
+      format: "json"
+
+  - type: "report"
+    parameters:
+      title: "ZAP Security Scan Report"
+      template: "traditional-pdf"
+      reportDir: "zap-results"
+      reportFile: "zap-report.pdf"
