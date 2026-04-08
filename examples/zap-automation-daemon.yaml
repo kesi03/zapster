@@ -34,7 +34,7 @@ jobs:
     parameters:
       title: "ZAP Security Scan Report"
       template: "traditional-html"
-      reportDir: "zap-results"
+      reportDir: "../zap-results"
       reportFile: "zap-report.html"
       format: "html"
 
@@ -42,7 +42,7 @@ jobs:
     parameters:
       title: "ZAP Security Scan Report"
       template: "traditional-md"
-      reportDir: "zap-results"
+      reportDir: "../zap-results"
       reportFile: "zap-report.md"
       format: "md"
 
@@ -50,7 +50,7 @@ jobs:
     parameters:
       title: "ZAP Security Scan Report"
       template: "traditional-xml"
-      reportDir: "zap-results"
+      reportDir: "../zap-results"
       reportFile: "zap-report.xml"
       format: "xml"
 
@@ -58,7 +58,7 @@ jobs:
     parameters:
       title: "ZAP Security Scan Report"
       template: "traditional-json"
-      reportDir: "zap-results"
+      reportDir: "../zap-results"
       reportFile: "zap-report.json"
       format: "json"
 
@@ -66,6 +66,6 @@ jobs:
     parameters:
       title: "ZAP Security Scan Report"
       template: "traditional-pdf"
-      reportDir: "zap-results"
+      reportDir: "../zap-results"
       reportFile: "zap-report.pdf"
       format: "pdf"
