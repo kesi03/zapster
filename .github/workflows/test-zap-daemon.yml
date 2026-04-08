@@ -33,4 +33,5 @@ jobs:
           jvm-opts: "-Xms1g -Xmx1g -XX:+UseZGC"
 
       - name: Display version
-        run: echo "ZAP Version: ${{ steps.run-zap-daemon.outputs.zap-version }}"
+        run: |
+          echo "ZAP Version: ${{ steps.run-zap-daemon.outputs.zap-version }}"

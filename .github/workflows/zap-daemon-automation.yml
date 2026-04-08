@@ -1,0 +1,204 @@
+name: ZAP Daemon Automation Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      plan_file:
+        description: 'Path to ZAP automation plan file'
+        required: true
+        default: 'examples/zap-automation.yaml'
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+
+jobs:
+  zap-daemon-automation:
+    name: ZAP Daemon Automation Scan
+    runs-on: ubuntu-latest
+    env:
+      ZAP_HOST: localhost
+      ZAP_PORT: 8080
+      ZAP_API_KEY: zapr-api-key
+      PLAN_FILE: ${{ inputs.plan_file || 'examples/zap-automation.yaml' }}
+      DEBUG: ${{ inputs.debug || 'false' }}
+      ZAPR_WORKSPACE: zap-results
+      TOML_FILE: zap-daemon.toml
+
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+        options: --shm-size=512m
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: |
+          mkdir -p $ZAPR_WORKSPACE
+          mkdir -p $ZAPR_WORKSPACE/reports
+          mkdir -p $ZAPR_WORKSPACE/logs
+
+      - name: Create ZAP Daemon TOML configuration
+        run: |
+          cat > $TOML_FILE << 'TOMLEOF'
+          [DOCKER]
+          IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
+          PORT = 8080
+          HOST = "0.0.0.0"
+          MAX_RESPONSE_SIZE = 104857600
+          DB_CACHE_SIZE = 1000000
+          DB_RECOVERY_LOG = false
+          TIMEOUT_MINS = 30
+          NAME = "zap-daemon"
+          WORKSPACE = "zap-results"
+
+          [JAVA_OPTIONS]
+          flags = [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+UseZGC",
+            "-Xss512k",
+            "-XX:+UseContainerSupport",
+            "-XX:MaxRAMPercentage=80"
+          ]
+
+          [CONFIG]
+          flags = [
+            "api.addrs.addr.name=.*",
+            "api.addrs.addr.regex=true"
+          ]
+          TOMLEOF
+          echo "Created TOML config:"
+          cat $TOML_FILE
+
+      - name: Start ZAP Daemon
+        run: pnpm run daemon:start --toml $TOML_FILE
+
+      - name: Wait for Juice Shop to be ready
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Juice Shop is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "Juice Shop failed to start within $timeout seconds"
+          exit 1
+
+      - name: Wait for ZAP to be ready
+        run: |
+          echo "Waiting for ZAP daemon to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:$ZAP_PORT | grep -qE "200|302|401"; then
+              echo "ZAP daemon is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "ZAP daemon failed to start within $timeout seconds"
+          exit 1
+
+      - name: Verify ZAP Connection
+        run: pnpm run zap:version
+
+      - name: Run ZAP Automation
+        run: |
+          DEBUG_FLAG=""
+          if [ "${{ inputs.debug }}" = "true" ]; then
+            DEBUG_FLAG="--debug"
+          fi
+          pnpm run zap:automate daemon --file ${{ env.PLAN_FILE }} --workspace $ZAPR_WORKSPACE $DEBUG_FLAG
+
+      - name: Generate JUnit Results
+        run: pnpm run utils:create-junit-results --workspace zap-results --name junit-results.xml --title "ZAP Security Scan"
+
+      - name: Generate Alert JSON
+        run: pnpm run zap:get-alerts --workspace zap-results --name alerts.json
+
+      - name: Generate Excel Report
+        run: pnpm run utils:create-excel-report --workspace zap-results --name zap-report.xlsx
+
+      - name: View daemon logs
+        run: pnpm run daemon:log || true
+
+      - name: Stop ZAP Daemon
+        if: always()
+        run: pnpm run daemon:stop || true
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: zap-daemon-automation-reports-${{ github.run_number }}-${{ github.sha }}
+          path: |
+            zap-results/reports/
+            zap-results/logs/
+            zap-results/*.html
+            zap-results/*.json
+            zap-results/*.xml
+            zap-results/*.md
+          retention-days: 30
+
+      - name: Display Results Summary
+        run: |
+          echo "## ZAP Daemon Automation Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Plan File:** ${{ env.PLAN_FILE }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          JSON_REPORT=$(find zap-results -name "*report-json*.json" -type f 2>/dev/null | head -1)
+          if [ -n "$JSON_REPORT" ] && [ -f "$JSON_REPORT" ]; then
+            HIGH=$(grep -o '"risk":"HIGH"' "$JSON_REPORT" | wc -l)
+            MEDIUM=$(grep -o '"risk":"MEDIUM"' "$JSON_REPORT" | wc -l)
+            LOW=$(grep -o '"risk":"LOW"' "$JSON_REPORT" | wc -l)
+            INFO=$(grep -o '"risk":"INFORMATIONAL"' "$JSON_REPORT" | wc -l)
+            
+            echo "### Alert Summary" >> $GITHUB_STEP_SUMMARY
+            echo "| Risk Level | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|------------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+            echo "| Informational | $INFO |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Reports Generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for report in zap-results/reports/*; do
+            if [ -f "$report" ]; then
+              echo "- \`$report\`" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "All reports and logs have been uploaded as build artifacts." >> $GITHUB_STEP_SUMMARY

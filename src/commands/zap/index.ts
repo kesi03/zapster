@@ -16,5 +16,5 @@ export { configureRulesCommand } from './configureRules';
 export { getReportCommand } from './getReport';
 export { getAlertsCommand } from './getAlerts';
 export { getVersionCommand } from './getVersion';
-export { automateCommand } from './automate';
+export { automateCommand, daemonAutomateCommand, dockerAutomateSubCommand } from './automate';
 export { generatePlanCommand } from './generatePlan';

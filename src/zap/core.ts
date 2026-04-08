@@ -78,4 +78,14 @@ export class CoreAPI extends ZapBase {
     if (site) params.site = site;
     return this.request('/JSON/stats/view/stats', params);
   }
+
+  async getZapHomePath(): Promise<string> {
+    const response = await this.request<{ path: string }>('/JSON/core/view/zapHomePath/');
+    return response.path;
+  }
+
+  async getSessionLocation(): Promise<string> {
+    const response = await this.request<{ path: string }>('/JSON/core/view/sessionLocation/');
+    return response.path;
+  }
 }
