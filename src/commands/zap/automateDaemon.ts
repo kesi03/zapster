@@ -140,16 +140,65 @@ export const daemonAutomateCommand: yargs.CommandModule = {
 
       log.success('Automation plan completed successfully!');
 
+      log.info(`Report paths from ZAP: ${reportPaths.join(', ')}`);
+
       const reportJob = (plan.jobs || []).find((j: any) => j.type === 'report');
       const reportDir = reportJob?.parameters?.reportDir || 'zap-results';
-      const planDir = path.dirname(planFile);
-      const srcReportDir = path.isAbsolute(reportDir) ? reportDir : path.join(planDir, reportDir);
+      const planDir = path.dirname(path.resolve(planFile));
+      const resolvedReportDir = path.isAbsolute(reportDir) ? reportDir : path.join(planDir, reportDir);
+      const srcReportDir = path.resolve(resolvedReportDir);
       const destReportDir = getWorkspacePath('reports');
 
-  log.info(`Looking for reports in: ${srcReportDir}`);
-  log.info(`Copying reports to: ${destReportDir}`);
+      log.info(`Plan file: ${planFile}`);
+      log.info(`Plan directory: ${planDir}`);
+      log.info(`Report dir from config: ${reportDir}`);
+      log.info(`Resolved report directory: ${srcReportDir}`);
+      log.info(`Destination report directory: ${destReportDir}`);
 
-      const copiedFiles = copyReportsWithTimestamp(srcReportDir, destReportDir);
+      log.info(`Looking for reports in: ${srcReportDir}`);
+      log.info(`Copying reports to: ${destReportDir}`);
+
+      if (fs.existsSync(srcReportDir)) {
+        const files = fs.readdirSync(srcReportDir);
+        log.info(`Files in report dir: ${files.join(', ')}`);
+      } else {
+        log.warn(`Report directory does not exist: ${srcReportDir}`);
+      }
+
+      let copiedFiles: string[] = [];
+
+      if (reportPaths.length > 0) {
+        log.info(`Using report paths from ZAP: ${reportPaths.join(', ')}`);
+        for (const reportPath of reportPaths) {
+          try {
+            if (fs.existsSync(reportPath)) {
+              const ext = path.extname(reportPath).toLowerCase();
+              if (REPORT_EXTENSIONS.includes(ext)) {
+                const fileName = path.basename(reportPath);
+                let destPath = path.join(destReportDir, fileName);
+
+                if (fs.existsSync(destPath)) {
+                  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                  const nameWithoutExt = path.basename(fileName, ext);
+                  destPath = path.join(destReportDir, `${nameWithoutExt}_${timestamp}${ext}`);
+                }
+
+                fs.copyFileSync(reportPath, destPath);
+                copiedFiles.push(destPath);
+                log.info(`Copied report: ${path.basename(destPath)}`);
+              }
+            } else {
+              log.warn(`Report file not found: ${reportPath}`);
+            }
+          } catch (err: any) {
+            log.warn(`Failed to copy report ${reportPath}: ${err.message}`);
+          }
+        }
+      }
+
+      if (copiedFiles.length === 0) {
+        copiedFiles = copyReportsWithTimestamp(srcReportDir, destReportDir);
+      }
 
       if (copiedFiles.length > 0) {
         const uniqueFiles = [...new Set(copiedFiles.map((f: string) => path.basename(f)))];
