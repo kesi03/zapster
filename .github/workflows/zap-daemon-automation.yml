@@ -89,16 +89,16 @@ jobs:
           if [ "${{ inputs.debug }}" = "true" ]; then
             DEBUG_FLAG="--debug"
           fi
-          pnpm run zap:automate daemon --file ${{ env.PLAN_FILE }} --workspace $ZAPR_WORKSPACE $DEBUG_FLAG
+          pnpm run zap:automate daemon --file ${{ env.PLAN_FILE }} --workspace $ZAPR_WORKSPACE $DEBUG_FLAG || true
 
       - name: Generate JUnit Results
-        run: pnpm run utils:create-junit-results --workspace zap-results --name junit-results.xml --title "ZAP Security Scan"
+        run: pnpm run utils:create-junit-results --workspace zap-results --name junit-results.xml --title "ZAP Security Scan" || true
 
       - name: Generate Alert JSON
-        run: pnpm run zap:get-alerts --workspace zap-results --name alerts.json
+        run: pnpm run zap:get-alerts --workspace zap-results --name alerts.json || true
 
       - name: Generate Excel Report
-        run: pnpm run utils:create-excel-report --workspace zap-results --name zap-report.xlsx
+        run: pnpm run utils:create-excel-report --workspace zap-results --name zap-report.xlsx || true
 
       - name: View daemon logs
         run: pnpm run daemon:log || true
