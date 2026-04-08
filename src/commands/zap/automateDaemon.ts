@@ -160,7 +160,13 @@ export const daemonAutomateCommand: yargs.CommandModule = {
 
       if (fs.existsSync(srcReportDir)) {
         const files = fs.readdirSync(srcReportDir);
-        log.info(`Files in report dir: ${files.join(', ')}`);
+        log.info(`Files in report dir (${srcReportDir}): ${files.join(', ')}`);
+        
+        const allFiles = fs.readdirSync(srcReportDir, { withFileTypes: true });
+        for (const f of allFiles) {
+          const fullPath = path.join(srcReportDir, f.name);
+          log.info(`  ${f.name} - isFile: ${f.isFile()}, size: ${f.isFile() ? fs.statSync(fullPath).size : 'N/A'}`);
+        }
       } else {
         log.warn(`Report directory does not exist: ${srcReportDir}`);
       }
@@ -171,10 +177,13 @@ export const daemonAutomateCommand: yargs.CommandModule = {
         log.info(`Using report paths from ZAP: ${reportPaths.join(', ')}`);
         for (const reportPath of reportPaths) {
           try {
-            if (fs.existsSync(reportPath)) {
-              const ext = path.extname(reportPath).toLowerCase();
+            const resolvedPath = path.resolve(reportPath);
+            log.info(`Resolved report path: ${resolvedPath}`);
+            
+            if (fs.existsSync(resolvedPath)) {
+              const ext = path.extname(resolvedPath).toLowerCase();
               if (REPORT_EXTENSIONS.includes(ext)) {
-                const fileName = path.basename(reportPath);
+                const fileName = path.basename(resolvedPath);
                 let destPath = path.join(destReportDir, fileName);
 
                 if (fs.existsSync(destPath)) {
@@ -183,12 +192,12 @@ export const daemonAutomateCommand: yargs.CommandModule = {
                   destPath = path.join(destReportDir, `${nameWithoutExt}_${timestamp}${ext}`);
                 }
 
-                fs.copyFileSync(reportPath, destPath);
+                fs.copyFileSync(resolvedPath, destPath);
                 copiedFiles.push(destPath);
                 log.info(`Copied report: ${path.basename(destPath)}`);
               }
             } else {
-              log.warn(`Report file not found: ${reportPath}`);
+              log.warn(`Report file not found: ${resolvedPath}`);
             }
           } catch (err: any) {
             log.warn(`Failed to copy report ${reportPath}: ${err.message}`);
