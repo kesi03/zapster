@@ -118,6 +118,7 @@ jobs:
             zap-results/*.html
             zap-results/*.json
             zap-results/*.xml
+            zap-results/*.xlsx
             zap-results/*.md
           retention-days: 30
 
