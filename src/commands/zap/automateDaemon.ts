@@ -82,7 +82,7 @@ export const daemonAutomateCommand: yargs.CommandModule = {
       apiKey: argv.apiKey as string | undefined,
     });
 
-    const workspace = argv.workspace || process.env.ZAPR_WORKSPACE || './zap-results';
+    const workspace = (argv.workspace as string) || process.env.ZAPR_WORKSPACE || './zap-results';
 
     try {
       const version = await zap.core.getVersion();
@@ -131,7 +131,7 @@ export const daemonAutomateCommand: yargs.CommandModule = {
 
       const reportJob = (plan.jobs || []).find((j: any) => j.type === 'report');
       const reportDir = reportJob?.parameters?.reportDir || 'zap-results';
-      const srcReportDir = path.join(zapHome, reportDir);
+      const srcReportDir = path.isAbsolute(reportDir) ? reportDir : path.join(workspace, reportDir);
       const destReportDir = getWorkspacePath('reports');
 
       log.info(`Copying reports from: ${srcReportDir}`);
