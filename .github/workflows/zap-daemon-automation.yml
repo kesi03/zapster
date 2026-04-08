@@ -52,47 +52,14 @@ jobs:
       - name: Build project
         run: pnpm run build
 
-      - name: Create workspace directory
-        run: |
-          mkdir -p $ZAPR_WORKSPACE
-          mkdir -p $ZAPR_WORKSPACE/reports
-          mkdir -p $ZAPR_WORKSPACE/logs
+      - name: Download and pack ZAP offline
+        run: pnpm zap-downloader offline pack -o zap-offline.tar
 
-      - name: Create ZAP Daemon TOML configuration
-        run: |
-          cat > $TOML_FILE << 'TOMLEOF'
-          [DOCKER]
-          IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
-          PORT = 8080
-          HOST = "0.0.0.0"
-          MAX_RESPONSE_SIZE = 104857600
-          DB_CACHE_SIZE = 1000000
-          DB_RECOVERY_LOG = false
-          TIMEOUT_MINS = 30
-          NAME = "zap-daemon"
-          WORKSPACE = "zap-results"
-
-          [JAVA_OPTIONS]
-          flags = [
-            "-Xms2g",
-            "-Xmx2g",
-            "-XX:+UseZGC",
-            "-Xss512k",
-            "-XX:+UseContainerSupport",
-            "-XX:MaxRAMPercentage=80"
-          ]
-
-          [CONFIG]
-          flags = [
-            "api.addrs.addr.name=.*",
-            "api.addrs.addr.regex=true"
-          ]
-          TOMLEOF
-          echo "Created TOML config:"
-          cat $TOML_FILE
+      - name: Unpack ZAP to workspace
+        run: pnpm zap-downloader offline unpack -i zap-offline.tar -o zap-workspace
 
       - name: Start ZAP Daemon
-        run: pnpm run daemon:start --toml $TOML_FILE
+        run: pnpm run daemon:start -t zap-workspace/workspace/default.toml
 
       - name: Wait for Juice Shop to be ready
         run: |
@@ -111,20 +78,7 @@ jobs:
           exit 1
 
       - name: Wait for ZAP to be ready
-        run: |
-          echo "Waiting for ZAP daemon to be ready..."
-          timeout=120
-          counter=0
-          while [ $counter -lt $timeout ]; do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:$ZAP_PORT | grep -qE "200|302|401"; then
-              echo "ZAP daemon is ready!"
-              exit 0
-            fi
-            counter=$((counter + 5))
-            sleep 5
-          done
-          echo "ZAP daemon failed to start within $timeout seconds"
-          exit 1
+        run: pnpm daemon:started -T 120
 
       - name: Verify ZAP Connection
         run: pnpm run zap:version
