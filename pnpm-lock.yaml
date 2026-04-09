@@ -58,8 +58,8 @@ importers:
         version: 0.0.11(aws-cdk-lib@2.244.0(constructs@10.6.0))(constructs@10.6.0)
     devDependencies:
       '@mockholm/zap-downloader':
-        specifier: ^1.0.5
-        version: 1.0.5(@types/node@20.19.37)
+        specifier: ^1.0.7
+        version: 1.0.7(@types/node@20.19.37)
       '@types/cli-progress':
         specifier: ^3.11.6
         version: 3.11.6
@@ -316,8 +316,8 @@ packages:
   '@js-sdsl/ordered-map@4.4.2':
     resolution: {integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==}
 
-  '@mockholm/zap-downloader@1.0.5':
-    resolution: {integrity: sha512-C4tK/RCIj3e1/tA9MuY7TotpBDIY2f0tnGXL+QrCxT2ix6VmOGa/52mHE1Dfm1EYb3mH7IRHUiz+GW60q/h+ew==}
+  '@mockholm/zap-downloader@1.0.7':
+    resolution: {integrity: sha512-Us56+Sml8Dcv7fNGPLY9ZPI0ktb1I32VfHet/RL3Zg8hdBK2ijTA88iKGnBmEMuSJAhkHjqV8j1WCxT0R5QCtg==}
     hasBin: true
 
   '@pm2/agent@2.1.1':
@@ -1900,7 +1900,7 @@ snapshots:
 
   '@js-sdsl/ordered-map@4.4.2': {}
 
-  '@mockholm/zap-downloader@1.0.5(@types/node@20.19.37)':
+  '@mockholm/zap-downloader@1.0.7(@types/node@20.19.37)':
     dependencies:
       '@iarna/toml': 2.2.5
       axios: 1.13.6

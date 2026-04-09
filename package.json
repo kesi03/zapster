@@ -86,7 +86,7 @@
     "zap-cdk": "^0.0.11"
   },
   "devDependencies": {
-    "@mockholm/zap-downloader": "^1.0.5",
+    "@mockholm/zap-downloader": "^1.0.7",
     "@types/cli-progress": "^3.11.6",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.10.0",
