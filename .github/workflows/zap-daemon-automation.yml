@@ -95,7 +95,7 @@ jobs:
         run: pnpm run utils:create-junit-results --workspace zap-results --name junit-results.xml --title "ZAP Security Scan" || true
 
       - name: Display ZAP Log
-        run: cat workspace/.zap/zap.log || true
+        run: cat zap-results/.zap/zap.log || true
 
       - name: Generate Alert JSON
         run: pnpm run zap:get-alerts --workspace zap-results --name alerts.json || true
