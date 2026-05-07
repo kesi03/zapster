@@ -16,6 +16,7 @@ A comprehensive CLI tool for OWASP ZAP (Zed Attack Proxy) security scanning.
     - [Search & Discovery](#search--discovery)
     - [Advanced Proxy Management](#advanced-proxy-management)
     - [Configuration](#configuration-1)
+    - [Maintenance](#maintenance)
   - [Docker Scan Commands](#docker-scan-commands)
   - [Config Commands](#config-commands)
   - [Daemon Commands](#daemon-commands)
@@ -141,6 +142,7 @@ Available subcommands:
 - `get-alerts` - Get Alerts
 - `get-version` - Get ZAP Version
 - `automate` - Run ZAP Automation (daemon or docker)
+- `gc` - Run Garbage Collection
 
 #### `zap base-scan` - Spider Scan
 
@@ -1125,6 +1127,17 @@ Examples:
   zapr session --sites
   zapr session --urls
   zapr session --access-url https://example.com
+```
+
+#### `zap gc` - Run Garbage Collection
+
+Trigger ZAP's garbage collection to free up memory.
+
+```bash
+zapr zap gc
+
+Examples:
+  zapr zap gc
 ```
 
 ---

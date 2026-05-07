@@ -79,6 +79,10 @@ export class CoreAPI extends ZapBase {
     return this.request('/JSON/stats/view/stats', params);
   }
 
+  async runGarbageCollection(): Promise<void> {
+    await this.request('/JSON/core/action/runGarbageCollection/');
+  }
+
   async getZapHomePath(): Promise<string> {
     const response = await this.request<{ path: string }>('/JSON/core/view/zapHomePath/');
     return response.path;
