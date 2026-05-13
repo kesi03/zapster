@@ -75,6 +75,9 @@ jobs:
           echo "Juice Shop failed to start within $timeout seconds"
           exit 1
 
+      - name: Ensure workspace directory exists
+        run: mkdir -p $ZAPR_WORKSPACE
+
       - name: Run daemon autostart
         run: |
           echo "Starting ZAP daemon and running automation plan..."

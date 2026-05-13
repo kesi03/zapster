@@ -106,6 +106,21 @@ export const autostartDaemonCommand = {
 
       console.log(chalk.blue(`Running automation plan with jobs: ${expectedJobs.join(' -> ')}`));
 
+      const planDir = path.dirname(path.resolve(planPath));
+      const reportJobs = (plan.jobs || []).filter((job: any) => job.type === 'report');
+      for (const job of reportJobs) {
+        const reportDir = job.parameters?.reportDir;
+        if (reportDir) {
+          const resolvedDir = path.isAbsolute(reportDir)
+            ? reportDir
+            : path.join(planDir, reportDir);
+          if (!fs.existsSync(resolvedDir)) {
+            fs.mkdirSync(resolvedDir, { recursive: true });
+            console.log(chalk.gray(`Created report directory: ${resolvedDir}`));
+          }
+        }
+      }
+
       const zap = new ZapClient({
         host: result.host,
         port: result.port,
