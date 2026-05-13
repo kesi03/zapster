@@ -32,4 +32,7 @@ export interface TomlConfig {
   CONFIG?: {
     flags?: string[];
   };
+  AUTOMATION?: {
+    planPath?: string;
+  };
 }

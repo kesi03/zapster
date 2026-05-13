@@ -830,6 +830,7 @@ zapr daemon <subcommand> [options]
 
 Available subcommands:
 - `start` - Start ZAP as a daemon using pm2
+- `autostart` - Start ZAP daemon and run an automation plan once ready
 - `stop` - Stop ZAP daemon managed by pm2
 - `status` - Show PM2 status for the ZAP daemon
 - `log` - Return PM2 logs for the ZAP daemon
@@ -863,6 +864,56 @@ Examples:
   # With API key
   zapr daemon start -t config.toml -k my-api-key
 ```
+
+#### `daemon autostart` - Start Daemon and Run Automation
+
+Start ZAP as a daemon using pm2, wait for it to be ready, then run a ZAP Automation plan. This combines `daemon start` + `daemon started` + `zap automate daemon` into a single command. The plan path can be specified via CLI (`--plan`) or via the `[AUTOMATION]` section in a TOML config file.
+
+```bash
+zapr daemon autostart [options]
+```
+
+Options:
+
+| Option | Alias | Default | Description |
+|--------|-------|---------|-------------|
+| `--plan` | `-p` | (none) | Path to ZAP automation plan YAML file |
+| `--toml` | `-t` | (none) | Path to zap.toml configuration file |
+| `--dir` | `-d` | (none) | ZAP installation directory (where zap.jar is) |
+| `--workspace` | `-w` | `ZAPR_WORKSPACE` | ZAP working directory |
+| `--host` | | `0.0.0.0` | ZAP host to bind to |
+| `--port` | `-P` | `8080` | ZAP proxy port |
+| `--api-key` | `-k` | (none) | ZAP API key |
+| `--name` | `-N` | `zap-daemon` | PM2 process name |
+
+Examples:
+
+```bash
+# Start daemon and run a plan (CLI flag)
+zapr daemon autostart --plan zap-plan.yaml
+
+# Start daemon and run plan from TOML config
+zapr daemon autostart --toml /path/to/zap.toml
+
+# With explicit workspace
+zapr daemon autostart --plan plan.yaml -w ./results -P 8080
+```
+
+**TOML `[AUTOMATION]` section:**
+
+When using a TOML config file, you can specify the plan path in the `[AUTOMATION]` section:
+
+```toml
+[ENV]
+ZAP_DOWNLOADER_WORKSPACE = "/path/to/workspace"
+
+# ... other sections ...
+
+[AUTOMATION]
+planPath = "zap-plan.yaml"    # Path relative to the TOML file directory
+```
+
+The `planPath` is resolved relative to the directory containing the TOML file. CLI `--plan` flag takes precedence when both are provided.
 
 #### `daemon stop` - Stop ZAP Daemon
 

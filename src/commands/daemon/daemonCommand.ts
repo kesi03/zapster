@@ -1,6 +1,7 @@
 import yargs from 'yargs';
 import {
   startDaemonCommand,
+  autostartDaemonCommand,
   stopDaemonCommand,
   logsDaemonCommand,
   statusDaemonCommand,
@@ -15,6 +16,7 @@ export const daemonCommand = {
   builder: (yargs: yargs.Argv) => {
     return yargs
       .command(startDaemonCommand)
+      .command(autostartDaemonCommand)
       .command(stopDaemonCommand)
       .command(logsDaemonCommand)
       .command(statusDaemonCommand)

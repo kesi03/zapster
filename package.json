@@ -51,6 +51,7 @@
     "docker:start-daemon": "ts-node src/index.ts docker start-daemon",
     "docker:stop-daemon": "ts-node src/index.ts docker stop-daemon",
     "daemon:start": "ts-node src/index.ts daemon start",
+    "daemon:autostart": "ts-node src/index.ts daemon autostart",
     "daemon:stop": "ts-node src/index.ts daemon stop",
     "daemon:status": "ts-node src/index.ts daemon status",
     "daemon:log": "ts-node src/index.ts daemon log",
