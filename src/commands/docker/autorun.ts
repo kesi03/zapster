@@ -368,7 +368,11 @@ export const autorunDockerCommand: yargs.CommandModule = {
         ],
       };
 
-      if (network && network !== 'host') {
+      if (network === 'host') {
+        (createOptions.HostConfig as any).NetworkMode = 'host';
+        delete (createOptions as any).ExposedPorts;
+        delete (createOptions.HostConfig as any).PortBindings;
+      } else if (network) {
         (createOptions.HostConfig as any).NetworkMode = network;
       }
 

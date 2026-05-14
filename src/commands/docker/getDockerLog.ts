@@ -1,6 +1,5 @@
 import yargs from 'yargs';
 import * as fs from 'fs';
-import * as path from 'path';
 import Docker from 'dockerode';
 import { initLoggerWithWorkspace, getWorkspacePath } from '../../utils/workspace';
 import { log } from '../../utils/logger';
@@ -55,7 +54,7 @@ async function findContainerByImage(imageName: string): Promise<Docker.Container
 
 export const getDockerLogCommand: yargs.CommandModule = {
   command: 'get-docker-log',
-  describe: 'Get Docker container logs and write to agent.log',
+  describe: 'Get Docker container logs and write to zap.log',
   builder: (yargs) => {
     return yargs
       .option('container', {
@@ -76,7 +75,7 @@ export const getDockerLogCommand: yargs.CommandModule = {
       .option('name', {
         alias: 'n',
         type: 'string',
-        default: 'agent.log',
+        default: 'zap.log',
         description: 'Output filename',
       })
       .option('tail', {
@@ -89,7 +88,7 @@ export const getDockerLogCommand: yargs.CommandModule = {
   handler: async (argv) => {
     initLoggerWithWorkspace();
     const tailLines = argv.tail as number;
-    const filename = (argv.name as string) || 'agent.log';
+    const filename = (argv.name as string) || 'zap.log';
 
     try {
       let containerId: string | undefined = argv.container as string | undefined;
@@ -124,12 +123,7 @@ export const getDockerLogCommand: yargs.CommandModule = {
 
       const logs = parseDockerLogs(logsBuffer);
 
-      const logsDir = getWorkspacePath('logs');
-      if (!fs.existsSync(logsDir)) {
-        fs.mkdirSync(logsDir, { recursive: true });
-      }
-      
-      const logPath = path.join(logsDir, filename);
+      const logPath = getWorkspacePath(filename);
       fs.writeFileSync(logPath, logs, 'utf-8');
 
       log.success(`Docker logs saved to: ${logPath}`);
