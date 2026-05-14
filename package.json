@@ -1,6 +1,6 @@
 {
   "name": "@mockholm/zapr",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "CLI tool for OWASP ZAP API integration",
   "packageManager": "pnpm@9.0.0",
   "engines": {
