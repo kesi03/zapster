@@ -1,4 +1,4 @@
-name: Test Daemon Autostart
+name: Test Daemon Autorun
 
 on:
   workflow_dispatch:
@@ -16,8 +16,8 @@ on:
     - cron: '0 6 * * 1'
 
 jobs:
-  test-autostart:
-    name: Test daemon autostart
+  test-autorun:
+    name: Test daemon autorun
     runs-on: ubuntu-latest
     env:
       ZAP_HOST: localhost
@@ -78,10 +78,10 @@ jobs:
       - name: Ensure workspace directory exists
         run: mkdir -p $ZAPR_WORKSPACE
 
-      - name: Run daemon autostart
+      - name: Run daemon autorun
         run: |
           echo "Starting ZAP daemon and running automation plan..."
-          pnpm run daemon:autostart \
+          pnpm run daemon:autorun \
             -t zap-workspace/workspace/default.toml \
             --plan ${{ env.PLAN_FILE }} \
             --workspace $ZAPR_WORKSPACE
@@ -109,7 +109,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: zap-daemon-autostart-reports-${{ github.run_number }}-${{ github.sha }}
+          name: zap-daemon-autorun-reports-${{ github.run_number }}-${{ github.sha }}
           path: |
             zap-results/reports/
             zap-results/logs/
@@ -122,7 +122,7 @@ jobs:
 
       - name: Display Results Summary
         run: |
-          echo "## ZAP Daemon Autostart Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## ZAP Daemon Autorun Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Plan File:** ${{ env.PLAN_FILE }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

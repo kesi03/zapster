@@ -272,6 +272,7 @@ Available subcommands:
 - `get-docker-log` - Get Docker Container Logs
 - `start-daemon` - Start ZAP Daemon
 - `stop-daemon` - Stop ZAP Daemon
+- `autorun` - Start Docker Daemon and Run Automation
 
 #### TOML Configuration for Docker Commands
 
@@ -284,6 +285,7 @@ zapr docker full-scan -t config/zap-fullscan.toml
 zapr docker api-scan -t config/zap-apiscan.toml
 zapr docker automate -f plan.yaml -t config/zap-automate.toml
 zapr docker start-daemon -t config/zap-daemon.toml
+zapr docker autorun --plan plan.yaml -t config/zap-daemon.toml
 ```
 
 CLI arguments take precedence over TOML values, so you can use a config file with overrides.
@@ -649,6 +651,46 @@ Examples:
   zapr docker stop-daemon --name my-zap --force
 ```
 
+#### `docker autorun` - Start Docker Daemon and Run Automation
+
+Start ZAP as a daemon in Docker, wait for it to be ready, then run a ZAP Automation plan. This combines `docker start-daemon` + `ZAP API automation` into a single command.
+
+```bash
+zapr docker autorun [options]
+```
+
+Options:
+
+| Option | Alias | Default | Description |
+|--------|-------|---------|-------------|
+| `--plan` | `-p` | (none) | Path to ZAP automation plan YAML file |
+| `--toml` | `-t` | (none) | Path to zap-docker.toml configuration file |
+| `--image` | `-i` | `ghcr.io/zaproxy/zaproxy:stable` | ZAP Docker image to use |
+| `--port` | `-P` | `8080` | ZAP proxy port |
+| `--host` | `-H` | `0.0.0.0` | ZAP host to bind to |
+| `--api-key` | | (auto-generated) | API key for ZAP |
+| `--debug` | `-d` | `false` | Enable debug mode |
+| `--network` | `-n` | (none) | Docker network mode or name |
+| `--name` | `-N` | `zap-daemon` | Container name |
+| `--timeout-mins` | | `5` | Minutes to wait for ZAP to start |
+| `--max-response-size` | `-M` | `104857600` | Max response body size in bytes |
+| `--java-options` | | (defaults) | Java options |
+| `--db-cache-size` | | `1000000` | Database cache size |
+| `--db-recovery-log` | | `false` | Enable database recovery log |
+
+Examples:
+
+```bash
+# Start daemon and run a plan
+zapr docker autorun --plan zap-automation.yaml
+
+# Using TOML config
+zapr docker autorun -t config/zap-docker.toml --plan plan.yaml
+
+# With custom port and image
+zapr docker autorun --plan plan.yaml -P 9090 -i ghcr.io/zaproxy/zaproxy:weekly
+```
+
 ---
 
 ### Config Commands (`config`)
@@ -830,7 +872,7 @@ zapr daemon <subcommand> [options]
 
 Available subcommands:
 - `start` - Start ZAP as a daemon using pm2
-- `autostart` - Start ZAP daemon and run an automation plan once ready
+- `autorun` - Start ZAP daemon and run an automation plan once ready
 - `stop` - Stop ZAP daemon managed by pm2
 - `status` - Show PM2 status for the ZAP daemon
 - `log` - Return PM2 logs for the ZAP daemon
@@ -865,12 +907,12 @@ Examples:
   zapr daemon start -t config.toml -k my-api-key
 ```
 
-#### `daemon autostart` - Start Daemon and Run Automation
+#### `daemon autorun` - Start Daemon and Run Automation
 
 Start ZAP as a daemon using pm2, wait for it to be ready, then run a ZAP Automation plan. This combines `daemon start` + `daemon started` + `zap automate daemon` into a single command. The plan path can be specified via CLI (`--plan`) or via the `[AUTOMATION]` section in a TOML config file.
 
 ```bash
-zapr daemon autostart [options]
+zapr daemon autorun [options]
 ```
 
 Options:
@@ -890,13 +932,13 @@ Examples:
 
 ```bash
 # Start daemon and run a plan (CLI flag)
-zapr daemon autostart --plan zap-plan.yaml
+zapr daemon autorun --plan zap-plan.yaml
 
 # Start daemon and run plan from TOML config
-zapr daemon autostart --toml /path/to/zap.toml
+zapr daemon autorun --toml /path/to/zap.toml
 
 # With explicit workspace
-zapr daemon autostart --plan plan.yaml -w ./results -P 8080
+zapr daemon autorun --plan plan.yaml -w ./results -P 8080
 ```
 
 **TOML `[AUTOMATION]` section:**

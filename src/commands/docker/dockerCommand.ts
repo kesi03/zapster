@@ -5,6 +5,7 @@ import { apiScanCommand } from './apiScan';
 import { pullImageCommand } from './pullImage';
 import { getDockerLogCommand } from './getDockerLog';
 import { startDaemonCommand, stopDaemonCommand } from './daemon';
+import { autorunDockerCommand } from './autorun';
 import { dockerAutomateCommand } from './automate';
 
 export const dockerCommand: yargs.CommandModule = {
@@ -19,8 +20,9 @@ export const dockerCommand: yargs.CommandModule = {
       .command(getDockerLogCommand)
       .command(startDaemonCommand)
       .command(stopDaemonCommand)
+      .command(autorunDockerCommand)
       .command(dockerAutomateCommand)
-      .demandCommand(1, 'Specify a docker subcommand: baseline-scan, full-scan, api-scan, pull, get-docker-log, start-daemon, stop-daemon, or automate');
+      .demandCommand(1, 'Specify a docker subcommand: baseline-scan, full-scan, api-scan, pull, get-docker-log, start-daemon, stop-daemon, autorun, or automate');
   },
   handler: () => {
     yargs.showHelp();

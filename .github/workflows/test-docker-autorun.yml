@@ -1,0 +1,205 @@
+name: Test Docker Autorun
+
+on:
+  workflow_dispatch:
+    inputs:
+      plan_file:
+        description: 'Path to ZAP automation plan file'
+        required: false
+        default: ''
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+
+jobs:
+  test-docker-autorun:
+    name: Test Docker Autorun
+    runs-on: ubuntu-latest
+    env:
+      ZAPR_WORKSPACE: zap-results
+      API_KEY: zapr-api-key
+      DEBUG: ${{ inputs.debug || 'false' }}
+
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+        options: --shm-size=512m
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack + pin pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Create workspace directory
+        run: |
+          mkdir -p $ZAPR_WORKSPACE
+          chmod -R 777 $ZAPR_WORKSPACE
+
+      - name: Wait for Juice Shop to be ready
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          timeout=120
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Juice Shop is ready!"
+              exit 0
+            fi
+            counter=$((counter + 5))
+            sleep 5
+          done
+          echo "Juice Shop failed to start within $timeout seconds"
+          exit 1
+
+      - name: Create automation plan file
+        run: |
+          cat > $ZAPR_WORKSPACE/plan.yaml << 'EOF'
+          env:
+            target: "http://host.docker.internal:3000"
+            contexts:
+              - name: "mainContext"
+                urls:
+                  - "http://host.docker.internal:3000"
+                includePaths:
+                  - "http://host.docker.internal:3000.*"
+                excludePaths: []
+
+          jobs:
+            - type: "passiveScan-config"
+              parameters:
+                maxAlertsPerRule: 0
+
+            - type: "spider"
+              parameters:
+                context: "mainContext"
+                url: "http://host.docker.internal:3000"
+
+            - type: "spiderAjax"
+              parameters:
+                context: "mainContext"
+                url: "http://host.docker.internal:3000"
+                maxDuration: 2
+
+            - type: "activeScan"
+              parameters:
+                context: "mainContext"
+
+            - type: "report"
+              parameters:
+                title: "ZAP Security Scan Report"
+                template: "traditional-html"
+                reportDir: "/home/zap/config/examples/zap-results"
+                reportFile: "zap-report.html"
+                format: "html"
+
+            - type: "report"
+              parameters:
+                title: "ZAP Security Scan Report"
+                template: "traditional-json"
+                reportDir: "/home/zap/config/examples/zap-results"
+                reportFile: "zap-report.json"
+                format: "json"
+          EOF
+          echo "Plan file created:"
+          cat $ZAPR_WORKSPACE/plan.yaml
+
+      - name: Run Docker autorun
+        run: |
+          echo "Starting ZAP daemon in Docker and running automation plan..."
+          pnpm run docker:autorun \
+            --plan $ZAPR_WORKSPACE/plan.yaml \
+            --workspace $ZAPR_WORKSPACE \
+            --api-key $API_KEY \
+            --timeout-mins 10 \
+            --debug ${{ env.DEBUG }} || true
+
+      - name: Display ZAP results
+        run: |
+          echo "Contents of workspace:"
+          ls -la $ZAPR_WORKSPACE/ 2>/dev/null || true
+          echo ""
+          echo "Reports directory:"
+          ls -la $ZAPR_WORKSPACE/reports/ 2>/dev/null || true
+
+      - name: Generate JUnit Results
+        run: pnpm run utils:create-junit-results --workspace $ZAPR_WORKSPACE --name junit-results.xml --title "ZAP Docker Autorun" || true
+
+      - name: Generate Alert JSON
+        run: pnpm run zap:get-alerts --workspace $ZAPR_WORKSPACE --name alerts.json || true
+
+      - name: Generate Excel Report
+        run: pnpm run utils:create-excel-report --workspace $ZAPR_WORKSPACE --name zap-report.xlsx || true
+
+      - name: Stop ZAP Daemon Container
+        if: always()
+        run: |
+          docker stop zap-daemon 2>/dev/null || true
+          docker rm zap-daemon 2>/dev/null || true
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: zap-docker-autorun-reports-${{ github.run_number }}-${{ github.sha }}
+          path: |
+            ${{ env.ZAPR_WORKSPACE }}/reports/
+            ${{ env.ZAPR_WORKSPACE }}/*.html
+            ${{ env.ZAPR_WORKSPACE }}/*.json
+            ${{ env.ZAPR_WORKSPACE }}/*.xml
+            ${{ env.ZAPR_WORKSPACE }}/*.xlsx
+            ${{ env.ZAPR_WORKSPACE }}/*.md
+          retention-days: 30
+
+      - name: Display Results Summary
+        run: |
+          echo "## ZAP Docker Autorun Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Plan File:** ${{ env.ZAPR_WORKSPACE }}/plan.yaml" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          JSON_REPORT=$(find $ZAPR_WORKSPACE -name "*report-json*.json" -type f 2>/dev/null | head -1)
+          if [ -n "$JSON_REPORT" ] && [ -f "$JSON_REPORT" ]; then
+            HIGH=$(grep -o '"risk":"HIGH"' "$JSON_REPORT" | wc -l)
+            MEDIUM=$(grep -o '"risk":"MEDIUM"' "$JSON_REPORT" | wc -l)
+            LOW=$(grep -o '"risk":"LOW"' "$JSON_REPORT" | wc -l)
+            INFO=$(grep -o '"risk":"INFORMATIONAL"' "$JSON_REPORT" | wc -l)
+
+            echo "### Alert Summary" >> $GITHUB_STEP_SUMMARY
+            echo "| Risk Level | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|------------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+            echo "| Informational | $INFO |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "### Reports Generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for report in $ZAPR_WORKSPACE/reports/*; do
+            if [ -f "$report" ]; then
+              echo "- \`$report\`" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "All reports and logs have been uploaded as build artifacts." >> $GITHUB_STEP_SUMMARY

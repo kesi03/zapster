@@ -40,8 +40,8 @@ async function waitForDaemon(host: string, port: string | number, timeout = 120)
   });
 }
 
-export const autostartDaemonCommand = {
-  command: 'autostart',
+export const autorunDaemonCommand = {
+  command: 'autorun',
   describe: 'Start ZAP daemon and run an automation plan once ready',
   builder: (yargs: any) => {
     return yargs
@@ -139,7 +139,7 @@ export const autostartDaemonCommand = {
       console.log(chalk.green('\n✓ Automation plan completed successfully!'));
 
     } catch (err: any) {
-      console.error(chalk.red(`autostart failed: ${err.message}`));
+      console.error(chalk.red(`autorun failed: ${err.message}`));
       process.exit(1);
     }
   },

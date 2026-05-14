@@ -4,4 +4,5 @@ export { apiScanCommand } from './apiScan';
 export { pullImageCommand } from './pullImage';
 export { getDockerLogCommand } from './getDockerLog';
 export { startDaemonCommand, stopDaemonCommand } from './daemon';
+export { autorunDockerCommand } from './autorun';
 export { dockerCommand } from './dockerCommand';
