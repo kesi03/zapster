@@ -165,7 +165,7 @@ export const autorunDockerCommand: yargs.CommandModule = {
   builder: (yargs) => {
     return yargs
       .option('plan', {
-        alias: 'p',
+        alias: 'f',
         type: 'string',
         description: 'Path to ZAP automation plan YAML file',
       })
