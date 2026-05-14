@@ -284,7 +284,7 @@ export const autorunDockerCommand: yargs.CommandModule = {
     const zapImage = args.image || dockerConfig.IMAGE || 'ghcr.io/zaproxy/zaproxy:stable';
     const containerName = args.name || dockerConfig.NAME || 'zap-daemon';
     const apiKey = args.apiKey || Math.random().toString(36).substring(2, 18) + Date.now().toString(36);
-    const port = args.port || dockerConfig.PORT || 8080;
+    const port = Number(args.port) || Number(dockerConfig.PORT) || 8080;
     const host = args.host || dockerConfig.HOST || '0.0.0.0';
     const maxResponseSize = args.maxResponseSize || dockerConfig.MAX_RESPONSE_SIZE || 104857600;
     const dbCacheSize = args.dbCacheSize || dockerConfig.DB_CACHE_SIZE || 1000000;
@@ -371,7 +371,7 @@ export const autorunDockerCommand: yargs.CommandModule = {
         (createOptions.HostConfig as any).NetworkMode = network;
       }
 
-      log.info(`Creating container ${containerName}...`);
+      log.info(`Creating container ${containerName} with port=${port}...`);
       const container = await docker.createContainer(createOptions);
       await container.start();
 
